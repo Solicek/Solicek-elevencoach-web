@@ -1,0 +1,12 @@
+{
+  "name": "functions",
+  "description": "Cloud Functions pro ElevenCoach – bezpečný proxy k Gemini API (klíč nikdy neopouští server).",
+  "engines": {
+    "node": "22"
+  },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-functions": "^7.3.2"
+  },
+  "private": true
+}
