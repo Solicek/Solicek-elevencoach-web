@@ -9,9 +9,10 @@ interface Props {
   onBack: () => void;
   onUpdateRecord: (record: AttendanceRecord) => void;
   onDeleteRecord: () => void;
+  readOnly?: boolean;
 }
 
-export function AttendanceDetailScreen({ record, players, onBack, onUpdateRecord, onDeleteRecord }: Props) {
+export function AttendanceDetailScreen({ record, players, onBack, onUpdateRecord, onDeleteRecord, readOnly = false }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   return (
@@ -20,16 +21,18 @@ export function AttendanceDetailScreen({ record, players, onBack, onUpdateRecord
         <button className="btn-text" onClick={onBack}>
           ← Zpět
         </button>
-        <button className="btn-text danger" onClick={() => setShowDeleteConfirm(true)}>
-          Smazat
-        </button>
+        {!readOnly && (
+          <button className="btn-text danger" onClick={() => setShowDeleteConfirm(true)}>
+            Smazat
+          </button>
+        )}
       </div>
 
       <p className="text-bold" style={{ fontSize: "1.1rem" }}>
         {record.date}
       </p>
       <div className="spacer-12" />
-      <AttendanceChecklist record={record} players={players} onUpdate={onUpdateRecord} />
+      <AttendanceChecklist record={record} players={players} onUpdate={onUpdateRecord} readOnly={readOnly} />
 
       {showDeleteConfirm && (
         <Dialog

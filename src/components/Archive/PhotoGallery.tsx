@@ -7,9 +7,10 @@ interface Props {
   teamCode: string;
   entry: ArchivedLineup;
   onUpdateEntry: (entry: ArchivedLineup) => void;
+  readOnly?: boolean;
 }
 
-export function PhotoGallery({ teamCode, entry, onUpdateEntry }: Props) {
+export function PhotoGallery({ teamCode, entry, onUpdateEntry, readOnly = false }: Props) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
@@ -67,31 +68,33 @@ export function PhotoGallery({ teamCode, entry, onUpdateEntry }: Props) {
             <img src={url} alt="Fotka poznámek" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
         ))}
-        <label
-          style={{
-            aspectRatio: "1",
-            borderRadius: 8,
-            border: "1px dashed var(--text-secondary)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: uploading ? "default" : "pointer",
-            color: "var(--text-secondary)",
-            fontSize: "0.8rem",
-            textAlign: "center",
-          }}
-        >
-          {uploading ? <span className="spinner" style={{ width: 20, height: 20 }} /> : "+ Foto"}
-          <input
-            ref={inputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            disabled={uploading}
-            style={{ display: "none" }}
-            onChange={(e) => handleFileChosen(e.target.files?.[0])}
-          />
-        </label>
+        {!readOnly && (
+          <label
+            style={{
+              aspectRatio: "1",
+              borderRadius: 8,
+              border: "1px dashed var(--text-secondary)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: uploading ? "default" : "pointer",
+              color: "var(--text-secondary)",
+              fontSize: "0.8rem",
+              textAlign: "center",
+            }}
+          >
+            {uploading ? <span className="spinner" style={{ width: 20, height: 20 }} /> : "+ Foto"}
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              disabled={uploading}
+              style={{ display: "none" }}
+              onChange={(e) => handleFileChosen(e.target.files?.[0])}
+            />
+          </label>
+        )}
       </div>
 
       {viewerUrl && (
@@ -103,9 +106,11 @@ export function PhotoGallery({ teamCode, entry, onUpdateEntry }: Props) {
               <button className="btn-text" onClick={() => setViewerUrl(null)}>
                 Zavřít
               </button>
-              <button className="btn-text danger" onClick={() => handleDelete(viewerUrl)}>
-                Smazat
-              </button>
+              {!readOnly && (
+                <button className="btn-text danger" onClick={() => handleDelete(viewerUrl)}>
+                  Smazat
+                </button>
+              )}
             </>
           }
         >

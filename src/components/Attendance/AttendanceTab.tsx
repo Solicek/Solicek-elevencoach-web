@@ -1,21 +1,18 @@
 import { useState } from "react";
 import { AttendanceStatsSection } from "./AttendanceStatsSection";
-import { AddAttendanceDialog } from "./AddAttendanceDialog";
 import { AttendanceDetailScreen } from "./AttendanceDetailScreen";
-import { positionSortOrder } from "../../lib/assignment";
 import type { AttendanceRecord, Player } from "../../types";
 
 interface Props {
   players: Player[];
   attendance: AttendanceRecord[];
-  onAddRecord: (record: AttendanceRecord) => void;
   onUpdateRecord: (record: AttendanceRecord) => void;
   onDeleteRecord: (record: AttendanceRecord) => void;
+  readOnly?: boolean;
 }
 
-export function AttendanceTab({ players, attendance, onAddRecord, onUpdateRecord, onDeleteRecord }: Props) {
+export function AttendanceTab({ players, attendance, onUpdateRecord, onDeleteRecord, readOnly = false }: Props) {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
-  const [showAddDialog, setShowAddDialog] = useState(false);
 
   const selectedRecord = attendance.find((a) => a.id === selectedRecordId);
 
@@ -30,12 +27,13 @@ export function AttendanceTab({ players, attendance, onAddRecord, onUpdateRecord
           onDeleteRecord(selectedRecord);
           setSelectedRecordId(null);
         }}
+        readOnly={readOnly}
       />
     );
   }
 
   return (
-    <div className="content-with-fab" style={{ position: "relative", minHeight: "60dvh" }}>
+    <div style={{ position: "relative", minHeight: "60dvh" }}>
       {attendance.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
@@ -63,30 +61,6 @@ export function AttendanceTab({ players, attendance, onAddRecord, onUpdateRecord
             );
           })}
         </>
-      )}
-
-      <button className="btn fab-button" onClick={() => setShowAddDialog(true)}>
-        + Přidat docházku
-      </button>
-
-      {showAddDialog && (
-        <AddAttendanceDialog
-          onDismiss={() => setShowAddDialog(false)}
-          onConfirm={(date, kind) => {
-            const record: AttendanceRecord = {
-              id: crypto.randomUUID(),
-              date,
-              playerNames: [...players].sort((a, b) => positionSortOrder(a) - positionSortOrder(b)).map((p) => p.name),
-              absentNames: [],
-              trainingId: null,
-              matchId: null,
-              kind,
-            };
-            onAddRecord(record);
-            setShowAddDialog(false);
-            setSelectedRecordId(record.id);
-          }}
-        />
       )}
     </div>
   );

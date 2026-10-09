@@ -2,17 +2,18 @@ import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { ChipSelector } from "../Shell/ChipSelector";
 import { todayDateString } from "../../lib/dateUtils";
-import { MatchType, allMatchTypes } from "../../types";
+import { MatchType, allMatchTypes, HomeAway, allHomeAway } from "../../types";
 
 interface Props {
   onDismiss: () => void;
-  onConfirm: (date: string, opponent: string, matchType: string) => void;
+  onConfirm: (date: string, opponent: string, matchType: string, homeAway: string) => void;
 }
 
 export function SaveLineupDialog({ onDismiss, onConfirm }: Props) {
   const [date, setDate] = useState(todayDateString());
   const [opponent, setOpponent] = useState("");
   const [matchType, setMatchType] = useState<string>(MatchType.COMPETITIVE);
+  const [homeAway, setHomeAway] = useState<string>(HomeAway.HOME);
 
   return (
     <Dialog
@@ -27,7 +28,7 @@ export function SaveLineupDialog({ onDismiss, onConfirm }: Props) {
             className="btn"
             style={{ width: "auto", padding: "10px 20px" }}
             disabled={!date.trim() || !opponent.trim()}
-            onClick={() => onConfirm(date.trim(), opponent.trim(), matchType)}
+            onClick={() => onConfirm(date.trim(), opponent.trim(), matchType, homeAway)}
           >
             Uložit
           </button>
@@ -44,6 +45,11 @@ export function SaveLineupDialog({ onDismiss, onConfirm }: Props) {
         Typ zápasu:
       </p>
       <ChipSelector options={allMatchTypes} selected={matchType} onSelect={setMatchType} />
+      <div className="spacer-12" />
+      <p className="text-bold" style={{ fontSize: "0.85rem", marginBottom: 4 }}>
+        Doma / venku:
+      </p>
+      <ChipSelector options={allHomeAway} selected={homeAway} onSelect={setHomeAway} />
     </Dialog>
   );
 }

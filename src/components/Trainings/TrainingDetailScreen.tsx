@@ -5,6 +5,7 @@ import { TrainingBlockRow } from "./TrainingBlockRow";
 import { DiagramPreview } from "./DiagramPreview";
 import { AddCustomDrillDialog } from "./AddCustomDrillDialog";
 import { AiDrillGeneratorDialog } from "./AiDrillGeneratorDialog";
+import { DrillSourcesDialog } from "./DrillSourcesDialog";
 import { DrillDiagramViewerDialog } from "./DrillDiagramViewerDialog";
 import { AddManualBlockDialog } from "./AddManualBlockDialog";
 import { SaveTemplateDialog } from "./SaveTemplateDialog";
@@ -29,6 +30,7 @@ interface Props {
   onDeleteCustomDrill: (drill: Drill) => void;
   onAddTemplate: (template: TrainingTemplate) => void;
   onDeleteTemplate: (template: TrainingTemplate) => void;
+  readOnly?: boolean;
 }
 
 export function TrainingDetailScreen({
@@ -46,6 +48,7 @@ export function TrainingDetailScreen({
   onDeleteCustomDrill,
   onAddTemplate,
   onDeleteTemplate,
+  readOnly = false,
 }: Props) {
   const [notes, setNotes] = useState(session.notes);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -55,7 +58,18 @@ export function TrainingDetailScreen({
   const [showInsertTemplateDialog, setShowInsertTemplateDialog] = useState(false);
   const [showLiveMode, setShowLiveMode] = useState(false);
   const [showAiDrillDialog, setShowAiDrillDialog] = useState(false);
+  const [showDrillSourcesDialog, setShowDrillSourcesDialog] = useState(false);
   const [enlargedDrill, setEnlargedDrill] = useState<Drill | null>(null);
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
+
+  function toggleCategory(category: string) {
+    setExpandedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(category)) next.delete(category);
+      else next.add(category);
+      return next;
+    });
+  }
 
   useEffect(() => setNotes(session.notes), [session.id]);
   useEffect(() => {
@@ -81,9 +95,11 @@ export function TrainingDetailScreen({
         <button className="btn-text" onClick={onBack}>
           ← Zpět
         </button>
-        <button className="btn-text danger" onClick={() => setShowDeleteConfirm(true)}>
-          Smazat
-        </button>
+        {!readOnly && (
+          <button className="btn-text danger" onClick={() => setShowDeleteConfirm(true)}>
+            Smazat
+          </button>
+        )}
       </div>
 
       <p className="text-bold" style={{ fontSize: "1.1rem" }}>
@@ -103,6 +119,7 @@ export function TrainingDetailScreen({
       <AttendanceInlineSection
         record={attendanceRecord}
         players={players}
+        readOnly={readOnly}
         onCreate={() =>
           onAddAttendanceRecord({
             id: crypto.randomUUID(),
@@ -131,6 +148,7 @@ export function TrainingDetailScreen({
           <TrainingBlockRow
             key={block.id}
             block={block}
+            readOnly={readOnly}
             onMinutesChange={(minutes) =>
               onUpdateSession({ ...session, blocks: session.blocks.map((b) => (b.id === block.id ? { ...b, minutes } : b)) })
             }
@@ -139,25 +157,29 @@ export function TrainingDetailScreen({
         ))
       )}
 
-      <div className="spacer-8" />
-      <div style={{ display: "flex", gap: 8 }}>
-        <button className="btn-outline" style={{ flex: 1 }} onClick={() => setShowAddManualBlockDialog(true)}>
-          + Vlastní blok
-        </button>
-        <button
-          className="btn-outline"
-          style={{ flex: 1 }}
-          disabled={templates.length === 0}
-          onClick={() => setShowInsertTemplateDialog(true)}
-        >
-          + Vložit šablonu
-        </button>
-      </div>
+      {!readOnly && (
+        <>
+          <div className="spacer-8" />
+          <div style={{ display: "flex", gap: 8 }}>
+            <button className="btn-outline" style={{ flex: 1 }} onClick={() => setShowAddManualBlockDialog(true)}>
+              + Vlastní blok
+            </button>
+            <button
+              className="btn-outline"
+              style={{ flex: 1 }}
+              disabled={templates.length === 0}
+              onClick={() => setShowInsertTemplateDialog(true)}
+            >
+              + Vložit šablonu
+            </button>
+          </div>
 
-      <div className="spacer-8" />
-      <button className="btn-outline" disabled={session.blocks.length === 0} onClick={() => setShowSaveTemplateDialog(true)}>
-        Uložit jako šablonu
-      </button>
+          <div className="spacer-8" />
+          <button className="btn-outline" disabled={session.blocks.length === 0} onClick={() => setShowSaveTemplateDialog(true)}>
+            Uložit jako šablonu
+          </button>
+        </>
+      )}
 
       <div className="spacer-16" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
@@ -169,6 +191,7 @@ export function TrainingDetailScreen({
         style={{ height: 100, resize: "vertical" }}
         placeholder="Volné poznámky k tréninku…"
         value={notes}
+        readOnly={readOnly}
         onChange={(e) => setNotes(e.target.value)}
       />
 
@@ -177,36 +200,61 @@ export function TrainingDetailScreen({
         <p className="text-bold" style={{ fontSize: "0.9rem" }}>
           Knihovna cvičení
         </p>
-        <div style={{ display: "flex" }}>
-          <button className="btn-text" onClick={() => setShowAiDrillDialog(true)}>
-            ✨ AI asistent
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <button className="btn-text" onClick={() => setShowDrillSourcesDialog(true)}>
+            🔗 Zdroje online
           </button>
-          <button className="btn-text" onClick={() => setShowAddDrillDialog(true)}>
-            + Vlastní cvičení
-          </button>
+          {!readOnly && (
+            <>
+              <button className="btn-text" onClick={() => setShowAiDrillDialog(true)}>
+                ✨ AI asistent
+              </button>
+              <button className="btn-text" onClick={() => setShowAddDrillDialog(true)}>
+                + Vlastní cvičení
+              </button>
+            </>
+          )}
         </div>
       </div>
-      <p className="text-gray" style={{ fontSize: "0.75rem" }}>
-        Klepnutím přidáš cvičení jako blok.
-      </p>
+      {!readOnly && (
+        <p className="text-gray" style={{ fontSize: "0.75rem" }}>
+          Klepnutím přidáš cvičení jako blok.
+        </p>
+      )}
       <div className="spacer-8" />
 
-      {Array.from(drillsByCategory.entries()).map(([category, drills]) => (
+      {Array.from(drillsByCategory.entries()).map(([category, drills]) => {
+        const isExpanded = expandedCategories.has(category);
+        return (
         <div key={category}>
-          <p className="text-bold" style={{ fontSize: "0.85rem", color: "var(--pitch-green)" }}>
-            {category}
-          </p>
+          <div
+            className="list-row"
+            style={{ cursor: "pointer", padding: "10px 0" }}
+            onClick={() => toggleCategory(category)}
+          >
+            <p className="text-bold" style={{ fontSize: "0.9rem", color: "var(--pitch-green)" }}>
+              {category}
+            </p>
+            <span className="text-gray" style={{ fontSize: "0.75rem" }}>
+              {drills.length} {isExpanded ? "▾" : "▸"}
+            </span>
+          </div>
+          {isExpanded && (
+            <>
           <div className="spacer-8" />
           {drills.map((drill) => (
             <div key={drill.id}>
               <div
                 className="list-row"
-                style={{ cursor: "pointer" }}
-                onClick={() =>
-                  onUpdateSession({
-                    ...session,
-                    blocks: [...session.blocks, { id: crypto.randomUUID(), title: drill.name, description: drill.description, minutes: 10 }],
-                  })
+                style={{ cursor: readOnly ? "default" : "pointer" }}
+                onClick={
+                  readOnly
+                    ? undefined
+                    : () =>
+                        onUpdateSession({
+                          ...session,
+                          blocks: [...session.blocks, { id: crypto.randomUUID(), title: drill.name, description: drill.description, minutes: 10 }],
+                        })
                 }
               >
                 {drill.diagram.length > 0 && (
@@ -225,7 +273,7 @@ export function TrainingDetailScreen({
                     {drill.description}
                   </p>
                 </div>
-                {drill.isCustom && (
+                {!readOnly && drill.isCustom && (
                   <span
                     className="text-error text-bold"
                     onClick={(e) => {
@@ -236,15 +284,20 @@ export function TrainingDetailScreen({
                     ×
                   </span>
                 )}
-                <span className="text-bold" style={{ color: "var(--primary)", fontSize: "1.2rem" }}>
-                  +
-                </span>
+                {!readOnly && (
+                  <span className="text-bold" style={{ color: "var(--primary)", fontSize: "1.2rem" }}>
+                    +
+                  </span>
+                )}
               </div>
             </div>
           ))}
           <div className="spacer-8" />
+            </>
+          )}
         </div>
-      ))}
+        );
+      })}
 
       {showDeleteConfirm && (
         <Dialog
@@ -266,6 +319,8 @@ export function TrainingDetailScreen({
       )}
 
       {enlargedDrill && <DrillDiagramViewerDialog drill={enlargedDrill} onDismiss={() => setEnlargedDrill(null)} />}
+
+      {showDrillSourcesDialog && <DrillSourcesDialog onDismiss={() => setShowDrillSourcesDialog(false)} />}
 
       {showAiDrillDialog && (
         <AiDrillGeneratorDialog

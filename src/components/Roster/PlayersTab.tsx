@@ -8,9 +8,10 @@ interface Props {
   onAddPlayer: (player: Player) => void;
   onEditPlayer: (player: Player) => void;
   onRemovePlayer: (player: Player) => void;
+  readOnly?: boolean;
 }
 
-export function PlayersTab({ players, onAddPlayer, onEditPlayer, onRemovePlayer }: Props) {
+export function PlayersTab({ players, onAddPlayer, onEditPlayer, onRemovePlayer, readOnly = false }: Props) {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
@@ -38,20 +39,26 @@ export function PlayersTab({ players, onAddPlayer, onEditPlayer, onRemovePlayer 
                   {player.positionDisplayName ?? "nehraje"}
                 </p>
               </div>
-              <button className="btn-text" onClick={() => setEditingPlayer(player)}>
-                Upravit
-              </button>
-              <button className="btn-text danger" onClick={() => onRemovePlayer(player)}>
-                Odebrat
-              </button>
+              {!readOnly && (
+                <>
+                  <button className="btn-text" onClick={() => setEditingPlayer(player)}>
+                    Upravit
+                  </button>
+                  <button className="btn-text danger" onClick={() => onRemovePlayer(player)}>
+                    Odebrat
+                  </button>
+                </>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      <button className="btn fab-button" onClick={() => setShowAddDialog(true)}>
-        + Přidat hráče
-      </button>
+      {!readOnly && (
+        <button className="btn fab-button" onClick={() => setShowAddDialog(true)}>
+          + Přidat hráče
+        </button>
+      )}
 
       {showAddDialog && (
         <AddPlayerDialog

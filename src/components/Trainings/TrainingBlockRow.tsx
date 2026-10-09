@@ -4,9 +4,10 @@ interface Props {
   block: TrainingBlock;
   onMinutesChange: (minutes: number) => void;
   onRemove: () => void;
+  readOnly?: boolean;
 }
 
-export function TrainingBlockRow({ block, onMinutesChange, onRemove }: Props) {
+export function TrainingBlockRow({ block, onMinutesChange, onRemove, readOnly = false }: Props) {
   return (
     <div className="list-row">
       <div style={{ flex: 1 }}>
@@ -20,16 +21,22 @@ export function TrainingBlockRow({ block, onMinutesChange, onRemove }: Props) {
         )}
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 2 }}>
-        <button className="btn-text" onClick={() => onMinutesChange(Math.max(0, block.minutes - 5))}>
-          −
-        </button>
+        {!readOnly && (
+          <button className="btn-text" onClick={() => onMinutesChange(Math.max(0, block.minutes - 5))}>
+            −
+          </button>
+        )}
         <span style={{ fontSize: "0.85rem" }}>{block.minutes} min</span>
-        <button className="btn-text" onClick={() => onMinutesChange(block.minutes + 5)}>
-          +
-        </button>
-        <span className="text-error text-bold" style={{ cursor: "pointer", padding: "0 4px" }} onClick={onRemove}>
-          ×
-        </span>
+        {!readOnly && (
+          <>
+            <button className="btn-text" onClick={() => onMinutesChange(block.minutes + 5)}>
+              +
+            </button>
+            <span className="text-error text-bold" style={{ cursor: "pointer", padding: "0 4px" }} onClick={onRemove}>
+              ×
+            </span>
+          </>
+        )}
       </div>
     </div>
   );

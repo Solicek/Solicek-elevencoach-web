@@ -74,7 +74,12 @@ export function DrawDiagramDialog({ initialDiagram, onDismiss, onSave }: Props) 
     <div
       style={{
         position: "fixed",
-        inset: 0,
+        top: 0,
+        left: 0,
+        // dvw/dvh místo inset:0 – v mobilním Safari (iPhone) "fixed" element s inset:0
+        // nesleduje spolehlivě skutečnou viditelnou výšku při schovávání adresního řádku.
+        width: "100dvw",
+        height: "100dvh",
         background: "var(--surface)",
         zIndex: 100,
         display: "flex",

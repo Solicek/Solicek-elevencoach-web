@@ -1,68 +1,89 @@
-import { useState } from "react";
-import type { ArchivedLineup, Substitute } from "../../types";
+import { useMemo, useState } from "react";
+import type { ArchivedLineup, AttendanceRecord, Player } from "../../types";
 import { SeasonSummarySection, PlayerStatsSummarySection } from "./SeasonSummarySection";
-import { SaveLineupDialog } from "../Lineup/SaveLineupDialog";
 import { ArchiveDetailScreen } from "./ArchiveDetailScreen";
 import { MatchType } from "../../types";
+import { matchTitle } from "../../lib/matchTitle";
+import { compareDateStrings, todayDateString } from "../../lib/dateUtils";
 
 interface Props {
   teamCode: string;
+  teamName: string;
   archive: ArchivedLineup[];
-  currentFormationName: string;
-  currentNames: Record<string, string>;
-  currentSubstitutes: Substitute[];
-  onAddEntry: (entry: ArchivedLineup) => void;
+  players: Player[];
+  attendance: AttendanceRecord[];
   onUpdateEntry: (entry: ArchivedLineup) => void;
   onDeleteEntry: (entry: ArchivedLineup) => void;
+  onAddAttendanceRecord: (record: AttendanceRecord) => void;
+  onUpdateAttendanceRecord: (record: AttendanceRecord) => void;
+  readOnly?: boolean;
 }
 
 export function ArchiveTab({
   teamCode,
+  teamName,
   archive,
-  currentFormationName,
-  currentNames,
-  currentSubstitutes,
-  onAddEntry,
+  players,
+  attendance,
   onUpdateEntry,
   onDeleteEntry,
+  onAddAttendanceRecord,
+  onUpdateAttendanceRecord,
+  readOnly = false,
 }: Props) {
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
 
-  const selectedEntry = archive.find((e) => e.id === selectedEntryId);
+  // Historie zobrazuje jen už odehrané zápasy (včetně dnešního) – budoucí se plánují a upravují
+  // v Kalendáři. Řazeno podle data zápasu (nejnovější nahoře), ne podle pořadí vytvoření záznamu.
+  const playedArchive = useMemo(() => {
+    const today = todayDateString();
+    return archive
+      .filter((e) => compareDateStrings(e.date, today) <= 0)
+      .sort((a, b) => compareDateStrings(b.date, a.date));
+  }, [archive]);
+
+  const selectedEntry = playedArchive.find((e) => e.id === selectedEntryId);
 
   if (selectedEntry) {
     return (
       <ArchiveDetailScreen
         teamCode={teamCode}
+        teamName={teamName}
         entry={selectedEntry}
+        players={players}
+        attendanceRecord={attendance.find((a) => a.matchId === selectedEntry.id) ?? null}
         onBack={() => setSelectedEntryId(null)}
         onUpdateEntry={onUpdateEntry}
         onDeleteEntry={() => {
           onDeleteEntry(selectedEntry);
           setSelectedEntryId(null);
         }}
+        onAddAttendanceRecord={onAddAttendanceRecord}
+        onUpdateAttendanceRecord={onUpdateAttendanceRecord}
+        forceReadOnly={readOnly}
       />
     );
   }
 
   return (
-    <div className="content-with-fab" style={{ position: "relative", minHeight: "60dvh" }}>
-      {archive.length === 0 ? (
+    <div style={{ position: "relative", minHeight: "60dvh" }}>
+      {playedArchive.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
-            {"Archiv je zatím prázdný.\nUlož si aktuální sestavu k datu a soupeři."}
+            {"Zatím žádné odehrané zápasy.\nNadcházející zápasy najdeš v Kalendáři."}
           </p>
         </div>
       ) : (
         <>
-          <SeasonSummarySection archive={archive} />
-          <PlayerStatsSummarySection archive={archive} />
+          <SeasonSummarySection archive={playedArchive} />
+          <PlayerStatsSummarySection archive={playedArchive} />
           <hr style={{ border: "none", borderTop: "1px solid var(--divider)" }} />
-          {archive.map((entry) => (
+          {playedArchive.map((entry) => (
             <div key={entry.id} className="list-row" style={{ cursor: "pointer" }} onClick={() => setSelectedEntryId(entry.id)}>
               <div style={{ flex: 1 }}>
-                <p className="text-bold">{entry.result ? `${entry.opponent} ${entry.result}` : entry.opponent}</p>
+                <p className="text-bold">
+                  {entry.result ? `${matchTitle(entry, teamName)} ${entry.result}` : matchTitle(entry, teamName)}
+                </p>
                 <p className="text-gray" style={{ fontSize: "0.8rem" }}>
                   {entry.date} · {entry.formationName}
                   {entry.matchType === MatchType.FRIENDLY ? " · Přátelské" : ""}
@@ -76,34 +97,6 @@ export function ArchiveTab({
             </div>
           ))}
         </>
-      )}
-
-      <button className="btn fab-button" onClick={() => setShowSaveDialog(true)}>
-        + Uložit aktuální sestavu do archivu
-      </button>
-
-      {showSaveDialog && (
-        <SaveLineupDialog
-          onDismiss={() => setShowSaveDialog(false)}
-          onConfirm={(date, opponent, matchType) => {
-            const entry: ArchivedLineup = {
-              id: crypto.randomUUID(),
-              date,
-              opponent,
-              formationName: currentFormationName,
-              names: { ...currentNames },
-              substitutes: [...currentSubstitutes],
-              notes: "",
-              photoPaths: [],
-              result: "",
-              playerStats: {},
-              matchType,
-            };
-            onAddEntry(entry);
-            setShowSaveDialog(false);
-            setSelectedEntryId(entry.id);
-          }}
-        />
       )}
     </div>
   );

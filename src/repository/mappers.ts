@@ -3,14 +3,19 @@ import type {
   AttendanceRecord,
   DiagramPoint,
   Drill,
+  FinePayment,
+  FineRates,
   Player,
   PlayerMatchStat,
   Substitute,
   TrainingBlock,
+  TrainingDiagram,
+  TrainingDiagramArrow,
+  TrainingDiagramElement,
   TrainingSession,
   TrainingTemplate,
 } from "../types";
-import { AttendanceKind, MatchType } from "../types";
+import { AttendanceKind, defaultFineRates, DiagramBackground, MatchType } from "../types";
 import { formationNames } from "../formations";
 
 type Doc = Record<string, unknown>;
@@ -48,16 +53,59 @@ export function mapToPlayer(id: string, data: Doc): Player {
 }
 
 export function playerMatchStatToMap(s: PlayerMatchStat): Doc {
-  return { goals: s.goals, assists: s.assists, yellowCards: s.yellowCards, redCards: s.redCards, rating: s.rating };
+  return {
+    goals: s.goals,
+    ownGoals: s.ownGoals,
+    assists: s.assists,
+    yellowCards: s.yellowCards,
+    redCards: s.redCards,
+    rating: s.rating,
+    yellowFoulCards: s.yellowFoulCards,
+    yellowDissentCards: s.yellowDissentCards,
+    straightRedCards: s.straightRedCards,
+    secondYellowRedCards: s.secondYellowRedCards,
+  };
 }
 
 export function mapToPlayerMatchStat(m: Doc): PlayerMatchStat {
   return {
     goals: Number(m.goals) || 0,
+    ownGoals: Number(m.ownGoals) || 0,
     assists: Number(m.assists) || 0,
     yellowCards: Number(m.yellowCards) || 0,
     redCards: Number(m.redCards) || 0,
     rating: Number(m.rating) || 0,
+    yellowFoulCards: Number(m.yellowFoulCards) || 0,
+    yellowDissentCards: Number(m.yellowDissentCards) || 0,
+    straightRedCards: Number(m.straightRedCards) || 0,
+    secondYellowRedCards: Number(m.secondYellowRedCards) || 0,
+  };
+}
+
+export function fineRatesToMap(r: FineRates): Doc {
+  return { yellowFoul: r.yellowFoul, yellowDissent: r.yellowDissent, secondYellowRed: r.secondYellowRed, straightRed: r.straightRed };
+}
+
+export function mapToFineRates(m: Doc | undefined): FineRates {
+  if (!m) return defaultFineRates;
+  return {
+    yellowFoul: Number(m.yellowFoul) || defaultFineRates.yellowFoul,
+    yellowDissent: Number(m.yellowDissent) || defaultFineRates.yellowDissent,
+    secondYellowRed: Number(m.secondYellowRed) || defaultFineRates.secondYellowRed,
+    straightRed: Number(m.straightRed) || defaultFineRates.straightRed,
+  };
+}
+
+export function finePaymentToMap(p: FinePayment): Doc {
+  return { matchId: p.matchId, playerName: p.playerName, paid: p.paid };
+}
+
+export function mapToFinePayment(id: string, data: Doc): FinePayment {
+  return {
+    id,
+    matchId: (data.matchId as string) ?? "",
+    playerName: (data.playerName as string) ?? "",
+    paid: Boolean(data.paid),
   };
 }
 
@@ -73,6 +121,9 @@ export function archivedLineupToMap(e: ArchivedLineup): Doc {
     result: e.result,
     playerStats: Object.fromEntries(Object.entries(e.playerStats).map(([k, v]) => [k, playerMatchStatToMap(v)])),
     matchType: e.matchType,
+    homeAway: e.homeAway,
+    closed: e.closed,
+    unlocked: e.unlocked ?? false,
   };
 }
 
@@ -94,6 +145,9 @@ export function mapToArchivedLineup(id: string, data: Doc): ArchivedLineup {
     result: (data.result as string) ?? "",
     playerStats,
     matchType: (data.matchType as string) ?? MatchType.COMPETITIVE,
+    homeAway: (data.homeAway as string) ?? "",
+    closed: Boolean(data.closed),
+    unlocked: Boolean(data.unlocked),
   };
 }
 
@@ -188,6 +242,57 @@ export function mapToDrill(id: string, data: Doc): Drill {
     description: (data.description as string) ?? "",
     isCustom: true,
     diagram: mapsToDiagram(data.diagram),
+  };
+}
+
+export function trainingDiagramElementToMap(e: TrainingDiagramElement): Doc {
+  return { id: e.id, type: e.type, x: e.x, y: e.y, color: e.color ?? null, rotation: e.rotation ?? null, scale: e.scale ?? null };
+}
+
+export function mapToTrainingDiagramElement(m: Doc): TrainingDiagramElement {
+  return {
+    id: (m.id as string) ?? crypto.randomUUID(),
+    type: (m.type as string) ?? "",
+    x: Number(m.x) || 0,
+    y: Number(m.y) || 0,
+    color: (m.color as string) ?? undefined,
+    rotation: typeof m.rotation === "number" ? m.rotation : undefined,
+    scale: typeof m.scale === "number" ? m.scale : undefined,
+  };
+}
+
+export function trainingDiagramArrowToMap(a: TrainingDiagramArrow): Doc {
+  return { id: a.id, points: a.points.map((p) => ({ x: p.x, y: p.y })), style: a.style, number: a.number };
+}
+
+export function mapToTrainingDiagramArrow(m: Doc): TrainingDiagramArrow {
+  const pointsRaw = Array.isArray(m.points) ? (m.points as Doc[]) : [];
+  return {
+    id: (m.id as string) ?? crypto.randomUUID(),
+    points: pointsRaw.map((p) => ({ x: Number(p.x) || 0, y: Number(p.y) || 0 })),
+    style: (m.style as string) ?? "",
+    number: typeof m.number === "number" ? m.number : null,
+  };
+}
+
+export function trainingDiagramToMap(d: TrainingDiagram): Doc {
+  return {
+    name: d.name,
+    background: d.background,
+    elements: d.elements.map(trainingDiagramElementToMap),
+    arrows: d.arrows.map(trainingDiagramArrowToMap),
+  };
+}
+
+export function mapToTrainingDiagram(id: string, data: Doc): TrainingDiagram {
+  const elementsRaw = Array.isArray(data.elements) ? (data.elements as Doc[]) : [];
+  const arrowsRaw = Array.isArray(data.arrows) ? (data.arrows as Doc[]) : [];
+  return {
+    id,
+    name: (data.name as string) ?? "",
+    background: (data.background as string) ?? DiagramBackground.FULL,
+    elements: elementsRaw.map(mapToTrainingDiagramElement),
+    arrows: arrowsRaw.map(mapToTrainingDiagramArrow),
   };
 }
 

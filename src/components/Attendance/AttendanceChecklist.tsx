@@ -6,13 +6,14 @@ interface Props {
   record: AttendanceRecord;
   players: Player[];
   onUpdate: (record: AttendanceRecord) => void;
+  readOnly?: boolean;
 }
 
 /**
  * Editovatelný seznam přítomných/nepřítomných pro jeden záznam docházky, plus možnost
  * dodatečně přidat hráče, kteří v rosteru přibyli až po založení tohoto záznamu.
  */
-export function AttendanceChecklist({ record, players, onUpdate }: Props) {
+export function AttendanceChecklist({ record, players, onUpdate, readOnly = false }: Props) {
   const [showAddPlayerDialog, setShowAddPlayerDialog] = useState(false);
   const missingPlayers = players.filter((p) => p.name.trim() !== "" && !record.playerNames.includes(p.name));
 
@@ -40,8 +41,8 @@ export function AttendanceChecklist({ record, players, onUpdate }: Props) {
             <div
               key={name}
               className="list-row"
-              style={{ cursor: "pointer", padding: "8px 0" }}
-              onClick={() => toggle(name, present)}
+              style={{ cursor: readOnly ? "default" : "pointer", padding: "8px 0" }}
+              onClick={readOnly ? undefined : () => toggle(name, present)}
             >
               <span>{name}</span>
               <input type="checkbox" checked={present} readOnly />
@@ -50,7 +51,7 @@ export function AttendanceChecklist({ record, players, onUpdate }: Props) {
         })
       )}
 
-      {missingPlayers.length > 0 && (
+      {!readOnly && missingPlayers.length > 0 && (
         <>
           <div className="spacer-8" />
           <button className="btn-outline" onClick={() => setShowAddPlayerDialog(true)}>
@@ -59,7 +60,7 @@ export function AttendanceChecklist({ record, players, onUpdate }: Props) {
         </>
       )}
 
-      {showAddPlayerDialog && (
+      {!readOnly && showAddPlayerDialog && (
         <Dialog
           title="Přidat hráče do docházky"
           onDismiss={() => setShowAddPlayerDialog(false)}
@@ -92,16 +93,24 @@ interface InlineProps {
   players: Player[];
   onCreate: () => void;
   onUpdate: (record: AttendanceRecord) => void;
+  readOnly?: boolean;
 }
 
 /** Sdílená docházková sekce vložená přímo do detailu tréninku/zápasu. */
-export function AttendanceInlineSection({ record, players, onCreate, onUpdate }: InlineProps) {
+export function AttendanceInlineSection({ record, players, onCreate, onUpdate, readOnly = false }: InlineProps) {
   if (!record) {
+    if (readOnly) {
+      return (
+        <p className="text-gray" style={{ fontSize: "0.8rem" }}>
+          Docházka nebyla zapsána.
+        </p>
+      );
+    }
     return (
       <button className="btn-outline" onClick={onCreate}>
         Zapsat docházku
       </button>
     );
   }
-  return <AttendanceChecklist record={record} players={players} onUpdate={onUpdate} />;
+  return <AttendanceChecklist record={record} players={players} onUpdate={onUpdate} readOnly={readOnly} />;
 }

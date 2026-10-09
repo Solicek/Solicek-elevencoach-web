@@ -9,9 +9,10 @@ interface Props {
   currentStarterNames: Set<string>;
   onAdd: (substitute: Substitute) => void;
   onRemove: (substitute: Substitute) => void;
+  readOnly?: boolean;
 }
 
-export function SubstitutesSection({ players, substitutes, currentStarterNames, onAdd, onRemove }: Props) {
+export function SubstitutesSection({ players, substitutes, currentStarterNames, onAdd, onRemove, readOnly = false }: Props) {
   const [showDialog, setShowDialog] = useState(false);
 
   const substituteNames = new Set(substitutes.map((s) => s.name));
@@ -32,17 +33,21 @@ export function SubstitutesSection({ players, substitutes, currentStarterNames, 
         {substitutes.map((substitute) => (
           <div key={substitute.id} className="chip" style={{ background: "var(--surface-variant)" }}>
             <span style={{ color: "white" }}>{substitute.name}</span>
-            <span style={{ color: "var(--error)", fontWeight: 700, cursor: "pointer" }} onClick={() => onRemove(substitute)}>
-              ×
-            </span>
+            {!readOnly && (
+              <span style={{ color: "var(--error)", fontWeight: 700, cursor: "pointer" }} onClick={() => onRemove(substitute)}>
+                ×
+              </span>
+            )}
           </div>
         ))}
-        <button className="chip" onClick={() => setShowDialog(true)}>
-          + Přidat náhradníka
-        </button>
+        {!readOnly && (
+          <button className="chip" onClick={() => setShowDialog(true)}>
+            + Přidat náhradníka
+          </button>
+        )}
       </div>
 
-      {showDialog && (
+      {!readOnly && showDialog && (
         <Dialog
           title="Přidat náhradníka"
           onDismiss={() => setShowDialog(false)}

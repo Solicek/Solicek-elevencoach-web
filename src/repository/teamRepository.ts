@@ -18,8 +18,11 @@ import type {
   ArchivedLineup,
   AttendanceRecord,
   Drill,
+  FinePayment,
+  FineRates,
   Player,
   Substitute,
+  TrainingDiagram,
   TrainingSession,
   TrainingTemplate,
 } from "../types";
@@ -27,15 +30,21 @@ import {
   archivedLineupToMap,
   attendanceRecordToMap,
   drillToMap,
+  finePaymentToMap,
+  fineRatesToMap,
   mapToArchivedLineup,
   mapToAttendanceRecord,
   mapToDrill,
+  mapToFinePayment,
+  mapToFineRates,
   mapToPlayer,
   mapToSubstitute,
+  mapToTrainingDiagram,
   mapToTrainingSession,
   mapToTrainingTemplate,
   playerToMap,
   substituteToMap,
+  trainingDiagramToMap,
   trainingSessionToMap,
   trainingTemplateToMap,
 } from "./mappers";
@@ -45,6 +54,9 @@ const TEAM_CODE_CHARS = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ";
 
 function teamDoc(teamCode: string) {
   return doc(db, "teams", teamCode);
+}
+function viewerCodeDoc(code: string) {
+  return doc(db, "viewerCodes", code);
 }
 function playersRef(teamCode: string) {
   return collection(teamDoc(teamCode), "players");
@@ -63,6 +75,12 @@ function customDrillsRef(teamCode: string) {
 }
 function trainingTemplatesRef(teamCode: string) {
   return collection(teamDoc(teamCode), "trainingTemplates");
+}
+function finePaymentsRef(teamCode: string) {
+  return collection(teamDoc(teamCode), "finePayments");
+}
+function trainingDiagramsRef(teamCode: string) {
+  return collection(teamDoc(teamCode), "trainingDiagrams");
 }
 
 function randomTeamCode(): string {
@@ -85,19 +103,71 @@ export async function createTeam(teamName: string): Promise<string> {
   return code;
 }
 
-/** Vrátí název týmu pro daný kód, nebo null pokud tým s tímto kódem neexistuje. */
-export async function getTeamName(code: string): Promise<string | null> {
+export interface TeamAccess {
+  teamCode: string;
+  teamName: string;
+  isReadOnly: boolean;
+}
+
+/**
+ * Zjistí, co zadaný kód znamená: buď je to přímo kód týmu (plný přístup), nebo kapitánský
+ * kód (jen prohlížení, viz getOrCreateViewerCode) – v obou případech vrátí skutečný kód týmu,
+ * jeho název a jestli jde o přístup jen pro čtení. Vrátí null, pokud kód neodpovídá ničemu.
+ */
+export async function resolveTeamAccess(rawCode: string): Promise<TeamAccess | null> {
   await ensureSignedIn();
-  const snap = await getDoc(teamDoc(code.toUpperCase()));
-  if (!snap.exists()) return null;
-  return (snap.data().teamName as string) ?? "";
+  const code = rawCode.toUpperCase();
+
+  const teamSnap = await getDoc(teamDoc(code));
+  if (teamSnap.exists()) {
+    return { teamCode: code, teamName: (teamSnap.data().teamName as string) ?? "", isReadOnly: false };
+  }
+
+  const viewerSnap = await getDoc(viewerCodeDoc(code));
+  if (viewerSnap.exists()) {
+    const teamCode = viewerSnap.data().teamCode as string;
+    const realTeamSnap = await getDoc(teamDoc(teamCode));
+    if (!realTeamSnap.exists()) return null;
+    return { teamCode, teamName: (realTeamSnap.data().teamName as string) ?? "", isReadOnly: true };
+  }
+
+  return null;
+}
+
+/**
+ * Vrátí kapitánský kód týmu (jen pro prohlížení) – pokud ještě neexistuje, vygeneruje nový
+ * a uloží ho jak do samostatné kolekce viewerCodes/{kód} -> teamCode (pro rychlé vyhledání
+ * při připojování), tak jako pole na dokumentu týmu (aby se příště nemusel generovat znovu).
+ */
+export async function getOrCreateViewerCode(teamCode: string): Promise<string> {
+  await ensureSignedIn();
+  const teamSnap = await getDoc(teamDoc(teamCode));
+  const existing = teamSnap.data()?.viewerCode as string | undefined;
+  if (existing) return existing;
+
+  let code: string;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    code = randomTeamCode();
+    const snap = await getDoc(viewerCodeDoc(code));
+    if (!snap.exists()) break;
+  }
+  await setDoc(viewerCodeDoc(code), { teamCode });
+  await updateDoc(teamDoc(teamCode), { viewerCode: code });
+  return code;
 }
 
 // --- Aktuální sestava (rozestavení + jména + náhradníci) ---
 
 export function listenLineup(
   teamCode: string,
-  onChange: (teamName: string, formationName: string, names: Record<string, string>, substitutes: Substitute[]) => void
+  onChange: (
+    teamName: string,
+    formationName: string,
+    names: Record<string, string>,
+    substitutes: Substitute[],
+    fineRates: FineRates
+  ) => void
 ): Unsubscribe {
   return onSnapshot(teamDoc(teamCode), (snap) => {
     if (!snap.exists()) return;
@@ -108,8 +178,14 @@ export function listenLineup(
     const names = (lineup.names as Record<string, string>) ?? {};
     const substitutesRaw = Array.isArray(lineup.substitutes) ? (lineup.substitutes as Record<string, unknown>[]) : [];
     const substitutes = substitutesRaw.map(mapToSubstitute);
-    onChange(teamName, formationName, names, substitutes);
+    const fineRates = mapToFineRates(data.fineRates as Record<string, unknown> | undefined);
+    onChange(teamName, formationName, names, substitutes, fineRates);
   });
+}
+
+/** Sazby pokut si každý tým nastavuje sám (viz záložka Pokuty) – uložené na dokumentu týmu. */
+export async function saveFineRates(teamCode: string, rates: FineRates): Promise<void> {
+  await updateDoc(teamDoc(teamCode), { fineRates: fineRatesToMap(rates) });
 }
 
 export async function saveLineup(
@@ -160,7 +236,12 @@ export async function addArchiveEntry(teamCode: string, entry: ArchivedLineup): 
 }
 
 export async function updateArchiveEntry(teamCode: string, entry: ArchivedLineup): Promise<void> {
-  await setDoc(doc(archiveRef(teamCode), entry.id), archivedLineupToMap(entry), { merge: true });
+  // Pozor: musí to být updateDoc(), ne setDoc(..., {merge:true}) – u setDoc+merge Firestore
+  // vnořená mapová pole (names, playerStats) sloučí rekurzivně klíč po klíči, takže smazaná/
+  // přesunutá pozice by se v nich nikdy doopravdy neodstranila a při dalším načtení (např. po
+  // přepnutí mezi zápasy) by se vrátila zpět jako "duchovitá" duplicita hráče na hřišti.
+  // Stejná chyba (a stejné řešení) jako dřív u saveLineup() pro živou sestavu – viz tam.
+  await updateDoc(doc(archiveRef(teamCode), entry.id), archivedLineupToMap(entry));
 }
 
 export async function deleteArchiveEntry(teamCode: string, entry: ArchivedLineup): Promise<void> {
@@ -241,6 +322,40 @@ export async function addTrainingTemplate(teamCode: string, template: TrainingTe
 
 export async function deleteTrainingTemplate(teamCode: string, template: TrainingTemplate): Promise<void> {
   await deleteDoc(doc(trainingTemplatesRef(teamCode), template.id));
+}
+
+// --- Pokuty (evidence zaplacení pokut za karty) ---
+
+export function listenFinePayments(teamCode: string, onChange: (payments: FinePayment[]) => void): Unsubscribe {
+  return onSnapshot(finePaymentsRef(teamCode), (snap) => {
+    onChange(snap.docs.map((d) => mapToFinePayment(d.id, d.data())));
+  });
+}
+
+export async function setFinePaymentStatus(teamCode: string, id: string, matchId: string, playerName: string, paid: boolean): Promise<void> {
+  await setDoc(doc(finePaymentsRef(teamCode), id), finePaymentToMap({ id, matchId, playerName, paid }));
+}
+
+// --- Nákresy tréninků (Trénink beta) ---
+
+export function listenTrainingDiagrams(teamCode: string, onChange: (diagrams: TrainingDiagram[]) => void): Unsubscribe {
+  const q = query(trainingDiagramsRef(teamCode), orderBy("createdAtMillis", "desc"));
+  return onSnapshot(q, (snap) => {
+    onChange(snap.docs.map((d) => mapToTrainingDiagram(d.id, d.data())));
+  });
+}
+
+export async function addTrainingDiagram(teamCode: string, diagram: TrainingDiagram): Promise<void> {
+  const data = { ...trainingDiagramToMap(diagram), createdAtMillis: Date.now() };
+  await setDoc(doc(trainingDiagramsRef(teamCode), diagram.id), data);
+}
+
+export async function updateTrainingDiagram(teamCode: string, diagram: TrainingDiagram): Promise<void> {
+  await setDoc(doc(trainingDiagramsRef(teamCode), diagram.id), trainingDiagramToMap(diagram), { merge: true });
+}
+
+export async function deleteTrainingDiagram(teamCode: string, diagram: TrainingDiagram): Promise<void> {
+  await deleteDoc(doc(trainingDiagramsRef(teamCode), diagram.id));
 }
 
 // Timestamp type re-exported in case callers need it (not currently used directly).

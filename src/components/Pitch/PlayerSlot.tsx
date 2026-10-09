@@ -2,22 +2,23 @@ interface Props {
   label: string;
   name: string;
   onTap: () => void;
+  readOnly?: boolean;
   style?: React.CSSProperties;
 }
 
 /** Jedna pozice na hřišti – kolečko s kódem pozice + jméno pod ním. Klik otevře výběr hráče. */
-export function PlayerSlot({ label, name, onTap, style }: Props) {
+export function PlayerSlot({ label, name, onTap, readOnly = false, style }: Props) {
   return (
     <div
       className="player-slot"
-      onClick={onTap}
+      onClick={readOnly ? undefined : onTap}
       style={{
         position: "absolute",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         width: 64,
-        cursor: "pointer",
+        cursor: readOnly ? "default" : "pointer",
         ...style,
       }}
     >
@@ -37,22 +38,22 @@ export function PlayerSlot({ label, name, onTap, style }: Props) {
       >
         {label}
       </div>
-      <div
-        style={{
-          marginTop: 2,
-          width: "100%",
-          background: "rgba(0,0,0,0.35)",
-          color: name ? "white" : "rgba(255,255,255,0.6)",
-          fontSize: 11,
-          textAlign: "center",
-          padding: "1px 2px",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {name || "jméno"}
-      </div>
+      {name && (
+        <div
+          style={{
+            marginTop: 2,
+            width: "100%",
+            color: "white",
+            fontSize: 11,
+            textAlign: "center",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {name}
+        </div>
+      )}
     </div>
   );
 }

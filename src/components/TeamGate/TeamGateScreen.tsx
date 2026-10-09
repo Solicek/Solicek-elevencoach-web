@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { createTeam, getTeamName } from "../../repository/teamRepository";
+import { createTeam, resolveTeamAccess, type TeamAccess } from "../../repository/teamRepository";
 
 interface Props {
-  onTeamReady: (code: string) => void;
+  onTeamReady: (code: string, isReadOnly: boolean) => void;
 }
 
 export function TeamGateScreen({ onTeamReady }: Props) {
@@ -10,14 +10,14 @@ export function TeamGateScreen({ onTeamReady }: Props) {
   const [joinCode, setJoinCode] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [pendingJoin, setPendingJoin] = useState<{ code: string; teamName: string } | null>(null);
+  const [pendingJoin, setPendingJoin] = useState<TeamAccess | null>(null);
 
   async function handleCreate() {
     setErrorMessage(null);
     setIsLoading(true);
     try {
       const code = await createTeam(newTeamName.trim());
-      onTeamReady(code);
+      onTeamReady(code, false);
     } catch (e) {
       setErrorMessage(`Založení týmu se nepovedlo: ${String(e)}`);
     } finally {
@@ -29,11 +29,11 @@ export function TeamGateScreen({ onTeamReady }: Props) {
     setErrorMessage(null);
     setIsLoading(true);
     try {
-      const teamName = await getTeamName(joinCode.trim());
-      if (teamName != null) {
-        setPendingJoin({ code: joinCode.trim(), teamName });
+      const access = await resolveTeamAccess(joinCode.trim());
+      if (access != null) {
+        setPendingJoin(access);
       } else {
-        setErrorMessage("Tým s tímto kódem neexistuje.");
+        setErrorMessage("Kód nenalezen – zkontroluj, že jsi ho opsal správně.");
       }
     } catch (e) {
       setErrorMessage(`Připojení se nepovedlo: ${String(e)}`);
@@ -94,9 +94,14 @@ export function TeamGateScreen({ onTeamReady }: Props) {
             <h2>Připojit se k týmu?</h2>
             <p>
               {pendingJoin.teamName
-                ? `Chystáš se připojit k týmu "${pendingJoin.teamName}" (kód ${pendingJoin.code}).`
-                : `Tým s kódem ${pendingJoin.code} nemá vyplněný název. Opravdu se chceš připojit?`}
+                ? `Chystáš se připojit k týmu "${pendingJoin.teamName}".`
+                : `Tým s tímto kódem nemá vyplněný název. Opravdu se chceš připojit?`}
             </p>
+            {pendingJoin.isReadOnly && (
+              <p className="text-gray" style={{ fontSize: "0.85rem", marginTop: 8 }}>
+                👁 Tohle je kapitánský kód – appka se otevře jen pro prohlížení, bez možnosti cokoliv upravovat.
+              </p>
+            )}
             <div className="dialog-actions">
               <button className="btn-text" onClick={() => setPendingJoin(null)}>
                 Zrušit
@@ -105,9 +110,9 @@ export function TeamGateScreen({ onTeamReady }: Props) {
                 className="btn"
                 style={{ width: "auto", padding: "10px 20px" }}
                 onClick={() => {
-                  const code = pendingJoin.code;
+                  const { teamCode, isReadOnly } = pendingJoin;
                   setPendingJoin(null);
-                  onTeamReady(code);
+                  onTeamReady(teamCode, isReadOnly);
                 }}
               >
                 Připojit se

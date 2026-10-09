@@ -1,14 +1,30 @@
 import type { ArchivedLineup, PlayerMatchStat } from "../types";
-import { MatchType } from "../types";
+import { HomeAway, MatchType } from "../types";
 
-/** Vytáhne z volného textu výsledku (např. "1:1 (1:0)") celkové skóre – první nalezený vzor "X:Y". */
+/**
+ * Vytáhne z volného textu výsledku (např. "1:1 (1:0)") celkové skóre – první nalezený vzor "X:Y".
+ * Vrací čísla v pořadí, jak jsou napsaná (domácí:hosté), ne "naše:soupeřovo" – pro to použij
+ * goalsForAgainst().
+ */
 export function parseScore(result: string): [number, number] | null {
   const match = /(\d+)\s*:\s*(\d+)/.exec(result);
   if (!match) return null;
-  const home = Number(match[1]);
-  const away = Number(match[2]);
-  if (Number.isNaN(home) || Number.isNaN(away)) return null;
-  return [home, away];
+  const first = Number(match[1]);
+  const second = Number(match[2]);
+  if (Number.isNaN(first) || Number.isNaN(second)) return null;
+  return [first, second];
+}
+
+/**
+ * Skóre v pohledu "naše góly : góly soupeře", bez ohledu na to, jestli se hrálo doma nebo venku
+ * (výsledek se zadává v pořadí domácí:hosté). U starších záznamů bez domácí/venku (homeAway === "")
+ * se drží původní konvence, kdy se první číslo vždy zadávalo jako naše skóre.
+ */
+export function goalsForAgainst(entry: ArchivedLineup): [number, number] | null {
+  const score = parseScore(entry.result);
+  if (!score) return null;
+  const [first, second] = score;
+  return entry.homeAway === HomeAway.AWAY ? [second, first] : [first, second];
 }
 
 export interface SeasonRecord {
@@ -17,17 +33,28 @@ export interface SeasonRecord {
   losses: number;
   goalsFor: number;
   goalsAgainst: number;
+  played: number; // všechny soutěžní zápasy, i ty bez zadaného výsledku
+  missingResults: number; // odehrané soutěžní zápasy, kterým chybí zadaný výsledek
 }
 
+/**
+ * Do V/R/P a skóre se počítá jen zápas s platně zadaným výsledkem (bez něj nejde poznat výhru
+ * od prohry) – ale "played" zahrnuje úplně všechny odehrané soutěžní zápasy, takže je vidět,
+ * kolika z nich ještě chybí dopsat výsledek.
+ */
 export function computeSeasonRecord(archive: ArchivedLineup[]): SeasonRecord {
   let wins = 0;
   let draws = 0;
   let losses = 0;
   let goalsFor = 0;
   let goalsAgainst = 0;
+  let missingResults = 0;
   for (const entry of archive) {
-    const score = parseScore(entry.result);
-    if (!score) continue;
+    const score = goalsForAgainst(entry);
+    if (!score) {
+      missingResults++;
+      continue;
+    }
     const [gf, ga] = score;
     goalsFor += gf;
     goalsAgainst += ga;
@@ -35,7 +62,7 @@ export function computeSeasonRecord(archive: ArchivedLineup[]): SeasonRecord {
     else if (gf < ga) losses++;
     else draws++;
   }
-  return { wins, draws, losses, goalsFor, goalsAgainst };
+  return { wins, draws, losses, goalsFor, goalsAgainst, played: archive.length, missingResults };
 }
 
 export interface PlayerSeasonStats {

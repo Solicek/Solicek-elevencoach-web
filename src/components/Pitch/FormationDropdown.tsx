@@ -4,15 +4,16 @@ interface Props {
   selected: string;
   options: string[];
   onSelected: (option: string) => void;
+  readOnly?: boolean;
 }
 
-export function FormationDropdown({ selected, options, onSelected }: Props) {
+export function FormationDropdown({ selected, options, onSelected, readOnly = false }: Props) {
   const [expanded, setExpanded] = useState(false);
 
   return (
     <div style={{ position: "relative" }}>
       <div
-        onClick={() => setExpanded(true)}
+        onClick={readOnly ? undefined : () => setExpanded(true)}
         style={{
           display: "flex",
           justifyContent: "space-between",
@@ -20,7 +21,8 @@ export function FormationDropdown({ selected, options, onSelected }: Props) {
           padding: "12px 16px",
           border: "1px solid var(--divider)",
           borderRadius: 8,
-          cursor: "pointer",
+          cursor: readOnly ? "default" : "pointer",
+          opacity: readOnly ? 0.6 : 1,
         }}
       >
         <div>
@@ -29,10 +31,10 @@ export function FormationDropdown({ selected, options, onSelected }: Props) {
           </p>
           <p>{selected}</p>
         </div>
-        <span>▾</span>
+        {!readOnly && <span>▾</span>}
       </div>
 
-      {expanded && (
+      {!readOnly && expanded && (
         <>
           <div style={{ position: "fixed", inset: 0, zIndex: 40 }} onClick={() => setExpanded(false)} />
           <div

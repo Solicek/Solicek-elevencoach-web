@@ -13,10 +13,11 @@ interface Props {
   onAssignPlayer: (player: Player, pos: PlayerPosition) => void;
   onUnassignSlot: (key: string) => void;
   onCreatePlayer: (name: string, pos: PlayerPosition) => void;
+  readOnly?: boolean;
   style?: React.CSSProperties;
 }
 
-export function Pitch({ positions, formationName, names, players, onAssignPlayer, onUnassignSlot, onCreatePlayer, style }: Props) {
+export function Pitch({ positions, formationName, names, players, onAssignPlayer, onUnassignSlot, onCreatePlayer, readOnly = false, style }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [pickerPosition, setPickerPosition] = useState<PlayerPosition | null>(null);
@@ -64,12 +65,13 @@ export function Pitch({ positions, formationName, names, players, onAssignPlayer
             label={pos.label}
             name={names[key] ?? ""}
             onTap={() => setPickerPosition(pos)}
+            readOnly={readOnly}
             style={{ left: offsetX, top: offsetY }}
           />
         );
       })}
 
-      {pickerPosition &&
+      {!readOnly && pickerPosition &&
         (() => {
           const key = `${formationName}|${pickerPosition.id}`;
           return (

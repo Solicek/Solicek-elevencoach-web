@@ -20,6 +20,7 @@ interface Props {
   onDeleteCustomDrill: (drill: Drill) => void;
   onAddTemplate: (template: TrainingTemplate) => void;
   onDeleteTemplate: (template: TrainingTemplate) => void;
+  readOnly?: boolean;
 }
 
 export function TrainingsTab({
@@ -37,6 +38,7 @@ export function TrainingsTab({
   onDeleteCustomDrill,
   onAddTemplate,
   onDeleteTemplate,
+  readOnly = false,
 }: Props) {
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -64,6 +66,7 @@ export function TrainingsTab({
         onDeleteCustomDrill={onDeleteCustomDrill}
         onAddTemplate={onAddTemplate}
         onDeleteTemplate={onDeleteTemplate}
+        readOnly={readOnly}
       />
     );
   }
@@ -90,15 +93,17 @@ export function TrainingsTab({
         })
       )}
 
-      <button
-        className="btn fab-button"
-        onClick={() => {
-          setNewDate(todayDateString());
-          setShowAddDialog(true);
-        }}
-      >
-        + Přidat trénink
-      </button>
+      {!readOnly && (
+        <button
+          className="btn fab-button"
+          onClick={() => {
+            setNewDate(todayDateString());
+            setShowAddDialog(true);
+          }}
+        >
+          + Přidat trénink
+        </button>
+      )}
 
       {showAddDialog && (
         <Dialog

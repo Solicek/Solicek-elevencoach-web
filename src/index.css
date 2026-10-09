@@ -9,6 +9,7 @@
   --error: #ff6b6b;
   --pitch-green: #2e7d32;
   --divider: #333;
+  --bottom-nav-h: 60px;
   color-scheme: dark;
 }
 
@@ -190,30 +191,55 @@ label.field-label {
   margin-top: 16px;
 }
 
-/* --- Tab bar --- */
-.tab-bar {
+/* --- Bottom nav --- */
+.bottom-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
   display: flex;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--divider);
-  -webkit-overflow-scrolling: touch;
+  height: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--surface);
+  border-top: 1px solid var(--divider);
 }
-.tab-bar::-webkit-scrollbar {
-  display: none;
-}
-.tab {
-  flex: none;
-  padding: 14px 18px;
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
   background: none;
   border: none;
   color: var(--text-secondary);
+  font-size: 0.68rem;
   font-weight: 600;
   cursor: pointer;
-  border-bottom: 2px solid transparent;
-  white-space: nowrap;
 }
-.tab.active {
+.bottom-nav-item.active {
   color: var(--primary);
-  border-bottom-color: var(--primary);
+}
+
+/* --- "Více" menu (sheet with the remaining tabs) --- */
+.more-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 8px;
+  background: none;
+  border: none;
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  text-align: left;
+}
+.more-menu-item.active {
+  color: var(--primary);
+  background: var(--surface);
 }
 
 .top-bar {
@@ -224,11 +250,34 @@ label.field-label {
   padding-top: max(16px, env(safe-area-inset-top));
   gap: 12px;
 }
+.top-bar-title {
+  font-size: 1.3rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .top-bar-actions {
   display: flex;
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  flex: none;
   justify-content: flex-end;
+}
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--primary);
+  cursor: pointer;
+}
+.icon-btn:active {
+  background: var(--surface-variant);
 }
 
 .list-row {
@@ -252,9 +301,10 @@ label.field-label {
   position: fixed;
   left: 16px;
   right: 16px;
-  bottom: max(16px, env(safe-area-inset-bottom));
+  bottom: calc(var(--bottom-nav-h) + env(safe-area-inset-bottom) + 12px);
   max-width: 688px;
   margin: 0 auto;
+  z-index: 40;
 }
 
 .content-with-fab {

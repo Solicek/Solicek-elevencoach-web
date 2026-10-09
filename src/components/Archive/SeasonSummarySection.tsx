@@ -1,14 +1,21 @@
 import type { ArchivedLineup } from "../../types";
 import { competitiveOnly, computePlayerSeasonStats, computeSeasonRecord, rankColor } from "../../lib/seasonStats";
 
+/** Skloňování "zápas" pro dané číslo: 1 zápas, 2-4 zápasy, 5+ zápasů. */
+function matchWord(count: number): string {
+  if (count === 1) return "zápas";
+  if (count >= 2 && count <= 4) return "zápasy";
+  return "zápasů";
+}
+
 export function SeasonSummarySection({ archive }: { archive: ArchivedLineup[] }) {
   const record = computeSeasonRecord(competitiveOnly(archive));
-  if (record.wins + record.draws + record.losses === 0) return null;
+  if (record.played === 0) return null;
 
   return (
     <div style={{ padding: 16 }}>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Bilance sezóny (bez přátelských)
+        Bilance sezóny (bez přátelských) · {record.played} {matchWord(record.played)}
       </p>
       <div className="spacer-8" />
       <div style={{ display: "flex", gap: 28 }}>
@@ -20,6 +27,11 @@ export function SeasonSummarySection({ archive }: { archive: ArchivedLineup[] })
       <p className="text-gray" style={{ fontSize: "0.85rem" }}>
         Skóre {record.goalsFor}:{record.goalsAgainst}
       </p>
+      {record.missingResults > 0 && (
+        <p className="text-gray" style={{ fontSize: "0.8rem", marginTop: 4 }}>
+          {record.missingResults} {matchWord(record.missingResults)} {record.missingResults === 1 ? "nemá" : "nemají"} zadaný výsledek – doplň ho v detailu zápasu, ať se počítá do bilance.
+        </p>
+      )}
     </div>
   );
 }

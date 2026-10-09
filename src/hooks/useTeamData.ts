@@ -5,11 +5,15 @@ import type {
   ArchivedLineup,
   AttendanceRecord,
   Drill,
+  FinePayment,
+  FineRates,
   Player,
   Substitute,
+  TrainingDiagram,
   TrainingSession,
   TrainingTemplate,
 } from "../types";
+import { defaultFineRates } from "../types";
 
 export interface TeamData {
   teamName: string;
@@ -22,6 +26,9 @@ export interface TeamData {
   trainings: TrainingSession[];
   customDrills: Drill[];
   trainingTemplates: TrainingTemplate[];
+  fineRates: FineRates;
+  finePayments: FinePayment[];
+  trainingDiagrams: TrainingDiagram[];
   lineupLoaded: boolean;
   setFormationName: (name: string) => void;
   setNames: (names: Record<string, string>) => void;
@@ -45,6 +52,9 @@ export function useTeamData(teamCode: string): TeamData {
   const [trainings, setTrainings] = useState<TrainingSession[]>([]);
   const [customDrills, setCustomDrills] = useState<Drill[]>([]);
   const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
+  const [fineRates, setFineRates] = useState<FineRates>(defaultFineRates);
+  const [finePayments, setFinePayments] = useState<FinePayment[]>([]);
+  const [trainingDiagrams, setTrainingDiagrams] = useState<TrainingDiagram[]>([]);
   const [lineupLoaded, setLineupLoaded] = useState(false);
 
   // lineupLoaded se čte i zapisuje uvnitř saveLineup efektu bez re-registrace listeneru
@@ -54,9 +64,10 @@ export function useTeamData(teamCode: string): TeamData {
     setLineupLoaded(false);
     lineupLoadedRef.current = false;
 
-    const unsubLineup = repo.listenLineup(teamCode, (newTeamName, newFormation, newNames, newSubs) => {
+    const unsubLineup = repo.listenLineup(teamCode, (newTeamName, newFormation, newNames, newSubs, newFineRates) => {
       setTeamName(newTeamName);
       setFormationName(newFormation);
+      setFineRates(newFineRates);
 
       // Ochrana proti starým datům poškozeným dřívější chybou v ukládání sestavy (Firestore
       // merge duplicitně slučoval staré a nové pozice, takže stejný hráč mohl zůstat zapsaný
@@ -97,6 +108,8 @@ export function useTeamData(teamCode: string): TeamData {
     const unsubTrainings = repo.listenTrainings(teamCode, setTrainings);
     const unsubCustomDrills = repo.listenCustomDrills(teamCode, setCustomDrills);
     const unsubTemplates = repo.listenTrainingTemplates(teamCode, setTrainingTemplates);
+    const unsubFinePayments = repo.listenFinePayments(teamCode, setFinePayments);
+    const unsubTrainingDiagrams = repo.listenTrainingDiagrams(teamCode, setTrainingDiagrams);
 
     return () => {
       unsubLineup();
@@ -106,6 +119,8 @@ export function useTeamData(teamCode: string): TeamData {
       unsubTrainings();
       unsubCustomDrills();
       unsubTemplates();
+      unsubFinePayments();
+      unsubTrainingDiagrams();
     };
   }, [teamCode]);
 
@@ -128,6 +143,9 @@ export function useTeamData(teamCode: string): TeamData {
     trainings,
     customDrills,
     trainingTemplates,
+    fineRates,
+    finePayments,
+    trainingDiagrams,
     lineupLoaded,
     setFormationName,
     setNames,
