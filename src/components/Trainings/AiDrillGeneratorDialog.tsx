@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { generateDrillFromPrompt } from "../../lib/aiTrainingAssistant";
 import type { Drill } from "../../types";
+import { t } from "../../lib/i18n";
 
 interface Props {
   onDismiss: () => void;
@@ -27,20 +28,20 @@ export function AiDrillGeneratorDialog({ onDismiss, onConfirm }: Props) {
       onConfirm(drill);
     } catch (e) {
       setIsLoading(false);
-      setErrorText(e instanceof Error ? e.message : "Nepodařilo se vygenerovat cvičení, zkus to prosím znovu.");
+      setErrorText(e instanceof Error ? e.message : t("tr.aiFailed"));
     }
   }
 
   return (
     <Dialog
-      title="✨ AI asistent cvičení"
+      title={t("tr.aiTitle")}
       onDismiss={() => {
         if (!isLoading) onDismiss();
       }}
       actions={
         <>
           <button className="btn-text" onClick={onDismiss} disabled={isLoading}>
-            Zrušit
+            {t("common.cancel")}
           </button>
           <button
             className="btn"
@@ -48,18 +49,18 @@ export function AiDrillGeneratorDialog({ onDismiss, onConfirm }: Props) {
             disabled={!promptText.trim() || isLoading}
             onClick={handleGenerate}
           >
-            Vygenerovat
+            {t("tr.aiGenerate")}
           </button>
         </>
       }
     >
       <p className="text-gray" style={{ fontSize: "0.85rem" }}>
-        Popiš, jaké cvičení chceš vygenerovat – Gemini navrhne rozestavení hráčů a pořadí přihrávek.
+        {t("tr.aiHint")}
       </p>
       <div className="spacer-8" />
       <input
         className="input"
-        placeholder="např. nácvik přihrávek pro 4 hráče"
+        placeholder={t("tr.aiPlaceholder")}
         value={promptText}
         onChange={(e) => setPromptText(e.target.value)}
         disabled={isLoading}
@@ -70,7 +71,7 @@ export function AiDrillGeneratorDialog({ onDismiss, onConfirm }: Props) {
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <div className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} />
             <span className="text-gray" style={{ fontSize: "0.85rem" }}>
-              Generuji…
+              {t("tr.aiGenerating")}
             </span>
           </div>
         </>

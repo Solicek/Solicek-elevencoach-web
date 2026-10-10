@@ -29,7 +29,28 @@ const RESPONSE_SCHEMA = {
   required: ["name", "category", "description", "players", "passSequence"],
 };
 
-function buildInstructions(promptText) {
+/**
+ * `category` se vrací VŽDY v češtině – je to uložená hodnota sdílená s Androidem, kterou si
+ * appka přeloží až při vykreslení (stejně jako u vestavěných cvičení). Název a popis naopak
+ * vznikají v jazyce trenéra, protože je nikdo dál nepřekládá.
+ */
+function buildInstructions(promptText, lang) {
+  if (lang === "en") {
+    return (
+      "You are an assistant to a youth/amateur football coach. Suggest a simple, practical " +
+      'training drill based on the coach\'s request: "' +
+      promptText +
+      '". ' +
+      "Describe it as player positions on the pitch – x,y coordinates between 0.1 and 0.9, where [0,0] is the " +
+      "top-left corner and [1,1] the bottom-right corner (the pitch is in portrait orientation). Use a realistic " +
+      "number of players (usually 3 to 8) in a shape that fits the drill (e.g. a square, a circle, two lines " +
+      "facing each other). passSequence is a list of indices into the players array (0-based) describing the " +
+      "order in which players pass the ball – the same index may repeat (e.g. a player passing back to the " +
+      "middle one). For category pick exactly one of these Czech values, do not translate them: Rozcvička, " +
+      "Technika, Kondice, Herní situace, Zakončení. Write name and description in English, briefly and " +
+      "practically (1-3 sentences), including a concrete instruction (number of touches, tempo, when to rotate)."
+    );
+  }
   return (
     "Jsi asistent fotbalového trenéra mládeže/amatérského týmu. Navrhni jednoduché, " +
     'prakticky proveditelné tréninkové cvičení podle požadavku trenéra: "' +
@@ -53,12 +74,14 @@ function buildInstructions(promptText) {
  */
 exports.generateTrainingDrill = onCall({ secrets: [geminiApiKey], cors: true }, async (request) => {
   const promptText = String(request.data?.promptText ?? "").trim();
+  // Jazyk posílá klient (podle nastavení zařízení); neznámá hodnota padá na češtinu.
+  const lang = request.data?.lang === "en" ? "en" : "cs";
   if (!promptText) {
     throw new HttpsError("invalid-argument", "Chybí popis cvičení.");
   }
 
   const body = {
-    contents: [{ parts: [{ text: buildInstructions(promptText) }] }],
+    contents: [{ parts: [{ text: buildInstructions(promptText, lang) }] }],
     generationConfig: {
       responseMimeType: "application/json",
       responseSchema: RESPONSE_SCHEMA,

@@ -29,6 +29,7 @@ import { computeAddSubstitute, computeAssignment, computeClearLineup, computeFor
 import { finePaymentId } from "./lib/fines";
 import { compareDateStrings, todayDateString } from "./lib/dateUtils";
 import { matchTitle } from "./lib/matchTitle";
+import { t } from "./lib/i18n";
 import type { Player, PlayerPosition } from "./types";
 
 function App() {
@@ -46,7 +47,9 @@ function App() {
   if (authError) {
     return (
       <div className="screen">
-        <p className="text-error">Chyba přihlášení: {authError}</p>
+        <p className="text-error">
+          {t("error.signIn")}: {authError}
+        </p>
       </div>
     );
   }
@@ -147,7 +150,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
       onLeaveTeam={onLeaveTeam}
       tabs={[
         {
-          label: "Sestava",
+          label: t("nav.lineup"),
           icon: <PitchIcon />,
           primary: true,
           content: (
@@ -168,7 +171,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: "Kalendář",
+          label: t("nav.calendar"),
           icon: <CalendarIcon />,
           primary: true,
           content: (
@@ -191,7 +194,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: "Soupiska",
+          label: t("nav.roster"),
           icon: <RosterIcon />,
           primary: false,
           content: (
@@ -217,7 +220,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: "Taktika",
+          label: t("nav.tactics"),
           icon: <TacticsIcon />,
           primary: true,
           content: (
@@ -229,7 +232,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: "Historie",
+          label: t("nav.history"),
           icon: <TrophyIcon />,
           primary: true,
           content: (
@@ -248,7 +251,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: "Docházka",
+          label: t("nav.attendance"),
           icon: <AttendanceIcon />,
           primary: false,
           content: (
@@ -262,7 +265,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: "Tréninky",
+          label: t("nav.trainings"),
           icon: <TrainingIcon />,
           primary: false,
           content: (
@@ -286,7 +289,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: "Trénink (beta)",
+          label: t("nav.trainingBeta"),
           icon: <TrainingIcon />,
           primary: false,
           content: (
@@ -300,7 +303,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: "Pokuty",
+          label: t("nav.fines"),
           icon: <FinesIcon />,
           primary: false,
           content: (

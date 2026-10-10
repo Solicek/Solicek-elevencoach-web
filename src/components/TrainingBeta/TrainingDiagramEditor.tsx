@@ -12,6 +12,7 @@ import {
 import type { TrainingDiagram, TrainingDiagramArrow, TrainingDiagramElement } from "../../types";
 import { DiagramElementIcon } from "./DiagramElementIcon";
 import { ArrowStyleIcon } from "./ArrowStyleIcon";
+import { storedLabel, t } from "../../lib/i18n";
 
 interface Props {
   initialDiagram: TrainingDiagram;
@@ -604,15 +605,15 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <button className="btn-text" onClick={onDismiss}>
-          Zrušit
+          {t("common.cancel")}
         </button>
         <button className="btn" style={{ width: "auto", padding: "10px 20px" }} onClick={() => onSave({ ...initialDiagram, name, background, elements, arrows })}>
-          Uložit
+          {t("common.save")}
         </button>
       </div>
 
       <div className="spacer-12" />
-      <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Název nákresu" />
+      <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder={t("beta.diagramName")} />
 
       <div className="spacer-12" />
       <ChipSelector options={allDiagramBackgrounds} selected={background} onSelect={setBackground} />
@@ -624,7 +625,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
             key={type}
             data-element-type={type}
             onClick={() => handleToolSelect(type)}
-            title={type}
+            title={storedLabel(type)}
             style={{
               flexShrink: 0,
               display: "flex",
@@ -645,7 +646,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
 
       <div className="spacer-8" />
       <p className="text-gray" style={{ fontSize: "0.75rem", marginBottom: 4 }}>
-        Styl šipky (vyber a pak kresli tažením po ploše)
+        {t("beta.arrowStyleHint")}
       </p>
       <div className="diagram-palette" style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
         {allArrowStyles.map((style) => (
@@ -658,7 +659,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
               setSelectedElementId(null);
               setSelectedArrowId(null);
             }}
-            title={style}
+            title={storedLabel(style)}
             style={{
               flexShrink: 0,
               display: "flex",
@@ -678,7 +679,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
 
       <div className="spacer-12" />
       <p className="text-gray" style={{ fontSize: "0.75rem", marginBottom: 4 }}>
-        Přiblížíš gestem dvou prstů (pinch)
+        {t("beta.pinchHint")}
       </p>
       <div
         ref={containerRef}
@@ -806,7 +807,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                     onPointerDown={(e) => handleArrowHandlePointerDown(e, selected.id, i, p)}
                     onPointerMove={handleArrowHandlePointerMove}
                     onPointerUp={handleArrowHandlePointerUp}
-                    title="Tažením uprav délku/směr šipky"
+                    title={t("beta.handleHint")}
                     style={{
                       position: "absolute",
                       left: `${p.x * 100}%`,
@@ -854,7 +855,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                     e.stopPropagation();
                     bumpArrowNumber(selected.id, -1);
                   }}
-                  title="Snížit číslo pořadí"
+                  title={t("beta.numberDown")}
                   style={{
                     position: "absolute",
                     left: `${mid.x * 100}%`,
@@ -879,7 +880,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                     e.stopPropagation();
                     bumpArrowNumber(selected.id, 1);
                   }}
-                  title="Zvýšit číslo pořadí / přidat číslo"
+                  title={t("beta.numberUp")}
                   style={{
                     position: "absolute",
                     left: `${mid.x * 100}%`,
@@ -938,7 +939,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                     e.stopPropagation();
                     rotateElement(selected.id);
                   }}
-                  title="Otočit o 45°"
+                  title={t("beta.rotate")}
                   style={{
                     position: "absolute",
                     left: `${selected.x * 100}%`,
@@ -993,7 +994,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                       e.stopPropagation();
                       scaleElement(selected.id, -SCALE_STEP);
                     }}
-                    title="Zmenšit"
+                    title={t("beta.scaleDown")}
                     style={{
                       position: "absolute",
                       left: `${selected.x * 100}%`,
@@ -1021,7 +1022,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                       e.stopPropagation();
                       scaleElement(selected.id, SCALE_STEP);
                     }}
-                    title="Zvětšit"
+                    title={t("beta.scaleUp")}
                     style={{
                       position: "absolute",
                       left: `${selected.x * 100}%`,
@@ -1068,7 +1069,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
               cursor: "pointer",
             }}
           >
-            Zrušit přiblížení
+            {t("beta.resetZoom")}
           </button>
         )}
       </div>
@@ -1085,7 +1086,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
               setSelectedArrowId(null);
             }}
           >
-            Vymazat vše
+            {t("beta.clearAll")}
           </button>
         </div>
       )}

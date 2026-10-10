@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import type { TrainingBlock } from "../../types";
+import { t } from "../../lib/i18n";
 
 interface Props {
   onDismiss: () => void;
@@ -13,12 +14,12 @@ export function AddManualBlockDialog({ onDismiss, onConfirm }: Props) {
 
   return (
     <Dialog
-      title="Vlastní blok"
+      title={t("tr.customBlockTitle")}
       onDismiss={onDismiss}
       actions={
         <>
           <button className="btn-text" onClick={onDismiss}>
-            Zrušit
+            {t("common.cancel")}
           </button>
           <button
             className="btn"
@@ -28,16 +29,16 @@ export function AddManualBlockDialog({ onDismiss, onConfirm }: Props) {
               onConfirm({ id: crypto.randomUUID(), title: title.trim(), description: "", minutes: Number(minutesText) || 0 })
             }
           >
-            Přidat
+            {t("common.add")}
           </button>
         </>
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        <input className="input" placeholder="Název bloku" value={title} onChange={(e) => setTitle(e.target.value)} />
+        <input className="input" placeholder={t("tr.blockName")} value={title} onChange={(e) => setTitle(e.target.value)} />
         <input
           className="input"
-          placeholder="Minuty"
+          placeholder={t("tr.minutes")}
           value={minutesText}
           onChange={(e) => {
             if (/^\d*$/.test(e.target.value)) setMinutesText(e.target.value);

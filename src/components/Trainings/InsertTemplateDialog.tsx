@@ -1,5 +1,6 @@
 import { Dialog } from "../Shell/Dialog";
 import type { TrainingTemplate } from "../../types";
+import { t, tf } from "../../lib/i18n";
 
 interface Props {
   templates: TrainingTemplate[];
@@ -11,17 +12,17 @@ interface Props {
 export function InsertTemplateDialog({ templates, onDismiss, onSelect, onDelete }: Props) {
   return (
     <Dialog
-      title="Vložit šablonu"
+      title={t("tr.insertTemplateTitle")}
       onDismiss={onDismiss}
       actions={
         <button className="btn-text" onClick={onDismiss}>
-          Zavřít
+          {t("common.close")}
         </button>
       }
     >
       {templates.length === 0 ? (
         <p className="text-gray" style={{ fontSize: "0.85rem" }}>
-          Zatím nemáš žádné uložené šablony.
+          {t("tr.noTemplates")}
         </p>
       ) : (
         templates.map((template) => (
@@ -29,7 +30,10 @@ export function InsertTemplateDialog({ templates, onDismiss, onSelect, onDelete 
             <div>
               <p>{template.name}</p>
               <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-                {template.blocks.length} bloků · {template.blocks.reduce((sum, b) => sum + b.minutes, 0)} min
+                {tf("tr.blocksSummary", {
+                  blocks: String(template.blocks.length),
+                  min: String(template.blocks.reduce((sum, b) => sum + b.minutes, 0)),
+                })}
               </p>
             </div>
             <span

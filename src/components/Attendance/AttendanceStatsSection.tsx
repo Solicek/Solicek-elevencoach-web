@@ -1,6 +1,7 @@
 import { positionSortOrder } from "../../lib/assignment";
 import { AttendanceKind } from "../../types";
 import type { AttendanceRecord, Player } from "../../types";
+import { t, tf } from "../../lib/i18n";
 
 /** Průměr z poměrů přítomnosti jednotlivých termínů (každý termín se počítá stejnou vahou). */
 function averageAttendance(records: AttendanceRecord[]): { average: number | null; count: number } {
@@ -16,7 +17,9 @@ function OverallStatRow({ label, average, count }: { label: string; average: num
     <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
       <span>{label}</span>
       <span className="text-gray" style={{ fontSize: "0.8rem" }}>
-        {average === null ? "–" : `${Math.round(average * 100)} % (${count} termínů)`}
+        {average === null
+          ? "–"
+          : `${Math.round(average * 100)} % (${tf("att.sessionsCount", { count: String(count) })})`}
       </span>
     </div>
   );
@@ -51,21 +54,21 @@ export function AttendanceStatsSection({ players, attendance }: { players: Playe
   return (
     <div style={{ padding: 16 }}>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Celková průměrná účast
+        {t("att.avgTitle")}
       </p>
       <div className="spacer-8" />
-      <OverallStatRow label="Celkem" average={overall.average} count={overall.count} />
-      <OverallStatRow label="Tréninky" average={trainingStats.average} count={trainingStats.count} />
-      <OverallStatRow label="Zápasy" average={matchStats.average} count={matchStats.count} />
+      <OverallStatRow label={t("att.total")} average={overall.average} count={overall.count} />
+      <OverallStatRow label={t("nav.trainings")} average={trainingStats.average} count={trainingStats.count} />
+      <OverallStatRow label={t("att.matches")} average={matchStats.average} count={matchStats.count} />
 
       <div className="spacer-16" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Statistika docházky podle hráče
+        {t("att.perPlayerTitle")}
       </p>
       <div className="spacer-8" />
       {stats.length === 0 ? (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          Zatím nejsou žádní hráči v rosteru.
+          {t("att.noPlayersInRoster")}
         </p>
       ) : (
         stats.map(({ name, present, total }) => (

@@ -1,4 +1,5 @@
 import { positionNames } from "../../lib/assignment";
+import { positionName } from "../../lib/i18n";
 
 interface Props {
   selected: string[];
@@ -8,10 +9,10 @@ interface Props {
 export function PositionCheckboxList({ selected, onToggle }: Props) {
   return (
     <div>
-      {Object.entries(positionNames).map(([code, label]) => (
+      {Object.keys(positionNames).map((code) => (
         <label className="checkbox-row" key={code}>
           <input type="checkbox" checked={selected.includes(code)} onChange={() => onToggle(code)} />
-          <span>{label}</span>
+          <span>{positionName(code)}</span>
         </label>
       ))}
     </div>

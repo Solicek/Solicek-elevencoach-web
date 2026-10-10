@@ -5,7 +5,8 @@ import { ArchiveDetailScreen } from "../Archive/ArchiveDetailScreen";
 import { compareDateStrings, todayDateString } from "../../lib/dateUtils";
 import { matchTitle } from "../../lib/matchTitle";
 import { parseFixtureWorkbook, type ParsedFixture } from "../../lib/fixtureImport";
-import { MatchType } from "../../types";
+import { storedLabel, t, tf } from "../../lib/i18n";
+import { AttendanceKind, HomeAway, MatchType } from "../../types";
 import type { ArchivedLineup, AttendanceRecord, Player, TrainingSession } from "../../types";
 
 type CalendarItem =
@@ -55,7 +56,7 @@ function CalendarRow({ item, teamName, onOpenMatch }: { item: CalendarItem; team
           </p>
         </div>
         <span style={badgeStyle(entry.matchType === MatchType.FRIENDLY ? "gray" : "var(--pitch-green)")}>
-          {entry.matchType === MatchType.FRIENDLY ? "Přátelský zápas" : "Zápas"}
+          {entry.matchType === MatchType.FRIENDLY ? t("cal.friendlyBadge") : t("cal.match")}
         </span>
       </div>
     );
@@ -66,12 +67,16 @@ function CalendarRow({ item, teamName, onOpenMatch }: { item: CalendarItem; team
   return (
     <div className="list-row">
       <div>
-        <p className="text-bold">{session.blocks.length === 0 ? "Trénink" : `Trénink · ${totalMinutes} min`}</p>
+        <p className="text-bold">
+          {session.blocks.length === 0
+            ? storedLabel(AttendanceKind.TRAINING)
+            : tf("cal.trainingWithMinutes", { min: String(totalMinutes) })}
+        </p>
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
           {session.date}
         </p>
       </div>
-      <span style={badgeStyle("var(--primary)")}>Trénink</span>
+      <span style={badgeStyle("var(--primary)")}>{storedLabel(AttendanceKind.TRAINING)}</span>
     </div>
   );
 }
@@ -119,7 +124,7 @@ export function CalendarTab({
       }
       setImportPreview({ ourTeamLabel: result.ourTeamLabel, fixtures: result.fixtures });
     } catch {
-      setImportError("Soubor se nepodařilo přečíst – zkontroluj, že jde o platný .xls/.xlsx export.");
+      setImportError(t("cal.importReadError"));
     }
   }
 
@@ -166,19 +171,19 @@ export function CalendarTab({
       {isEmpty ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
-            {"Zatím žádné zápasy ani tréninky.\nPřidej první tlačítkem dole."}
+            {t("cal.empty")}
           </p>
         </div>
       ) : (
         <>
           <div style={{ padding: "16px 16px 0" }}>
             <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-              Nadcházející
+              {t("cal.upcoming")}
             </p>
           </div>
           {upcoming.length === 0 ? (
             <p className="text-gray" style={{ fontSize: "0.8rem", padding: "8px 16px 16px" }}>
-              Nic naplánovaného.
+              {t("cal.nothingPlanned")}
             </p>
           ) : (
             upcoming.map((item) => (
@@ -190,12 +195,12 @@ export function CalendarTab({
 
           <div style={{ padding: "16px 16px 0" }}>
             <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-              Proběhlé
+              {t("cal.past")}
             </p>
           </div>
           {past.length === 0 ? (
             <p className="text-gray" style={{ fontSize: "0.8rem", padding: "8px 16px 16px" }}>
-              Zatím nic odehraného.
+              {t("cal.nothingPlayed")}
             </p>
           ) : (
             past.map((item) => (
@@ -207,7 +212,7 @@ export function CalendarTab({
 
       {!readOnly && (
         <button className="btn fab-button" onClick={() => setShowChooser(true)}>
-          + Přidat do kalendáře
+          {t("cal.add")}
         </button>
       )}
 
@@ -225,11 +230,11 @@ export function CalendarTab({
 
       {showChooser && (
         <Dialog
-          title="Co chceš přidat?"
+          title={t("cal.chooserTitle")}
           onDismiss={() => setShowChooser(false)}
           actions={
             <button className="btn-text" onClick={() => setShowChooser(false)}>
-              Zrušit
+              {t("common.cancel")}
             </button>
           }
         >
@@ -241,7 +246,7 @@ export function CalendarTab({
                 setShowSaveMatchDialog(true);
               }}
             >
-              Zápas
+              {t("cal.match")}
             </button>
             <button
               className="btn-outline"
@@ -251,7 +256,7 @@ export function CalendarTab({
                 setShowAddTrainingDialog(true);
               }}
             >
-              Trénink
+              {storedLabel(AttendanceKind.TRAINING)}
             </button>
             <button
               className="btn-outline"
@@ -260,7 +265,7 @@ export function CalendarTab({
                 fileInputRef.current?.click();
               }}
             >
-              Import rozpisu z Excelu (ISSF/FAČR)
+              {t("cal.importExcel")}
             </button>
           </div>
         </Dialog>
@@ -268,11 +273,11 @@ export function CalendarTab({
 
       {importError && (
         <Dialog
-          title="Import se nepovedl"
+          title={t("cal.importFailedTitle")}
           onDismiss={() => setImportError(null)}
           actions={
             <button className="btn-text" onClick={() => setImportError(null)}>
-              Zavřít
+              {t("common.close")}
             </button>
           }
         >
@@ -282,12 +287,12 @@ export function CalendarTab({
 
       {importPreview && (
         <Dialog
-          title="Import zápasů"
+          title={t("cal.importTitle")}
           onDismiss={() => setImportPreview(null)}
           actions={
             <>
               <button className="btn-text" onClick={() => setImportPreview(null)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button
                 className="btn"
@@ -316,13 +321,13 @@ export function CalendarTab({
                   setImportPreview(null);
                 }}
               >
-                Naimportovat
+                {t("cal.importConfirm")}
               </button>
             </>
           }
         >
           <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-            Rozpoznaný tým: <strong>{importPreview.ourTeamLabel}</strong>
+            {t("cal.recognizedTeam")}: <strong>{importPreview.ourTeamLabel}</strong>
           </p>
           <div className="spacer-8" />
           <div style={{ maxHeight: 340, overflowY: "auto" }}>
@@ -332,7 +337,7 @@ export function CalendarTab({
                 <div key={i} className="list-row" style={{ opacity: isDuplicate ? 0.5 : 1 }}>
                   <div>
                     <p>
-                      {f.homeAway === "Doma" ? "Doma" : "Venku"} · {f.opponent}
+                      {storedLabel(f.homeAway === HomeAway.HOME ? HomeAway.HOME : HomeAway.AWAY)} · {f.opponent}
                     </p>
                     <p className="text-gray" style={{ fontSize: "0.75rem" }}>
                       {f.date}
@@ -341,7 +346,7 @@ export function CalendarTab({
                   </div>
                   {isDuplicate && (
                     <span className="text-gray" style={{ fontSize: "0.75rem" }}>
-                      už existuje
+                      {t("cal.alreadyExists")}
                     </span>
                   )}
                 </div>
@@ -385,12 +390,12 @@ export function CalendarTab({
 
       {showAddTrainingDialog && (
         <Dialog
-          title="Přidat trénink"
+          title={t("cal.addTrainingTitle")}
           onDismiss={() => setShowAddTrainingDialog(false)}
           actions={
             <>
               <button className="btn-text" onClick={() => setShowAddTrainingDialog(false)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button
                 className="btn"
@@ -401,12 +406,12 @@ export function CalendarTab({
                   setShowAddTrainingDialog(false);
                 }}
               >
-                Přidat
+                {t("common.add")}
               </button>
             </>
           }
         >
-          <label className="field-label">Datum (DD-MM-RRRR)</label>
+          <label className="field-label">{t("saveLineup.date")}</label>
           <input className="input" value={newTrainingDate} onChange={(e) => setNewTrainingDate(e.target.value)} />
         </Dialog>
       )}

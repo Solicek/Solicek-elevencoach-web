@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { PlayerSlot } from "./PlayerSlot";
 import { PlayerPickerDialog } from "./PlayerPickerDialog";
 import { drawPitchLines, sizeCanvasToContainer } from "../../lib/drawing";
-import { positionNames } from "../../lib/assignment";
+import { positionCodeLabel, positionName } from "../../lib/i18n";
 import type { Player, PlayerPosition } from "../../types";
 
 interface Props {
@@ -62,7 +62,7 @@ export function Pitch({ positions, formationName, names, players, onAssignPlayer
         return (
           <PlayerSlot
             key={pos.id}
-            label={pos.label}
+            label={positionCodeLabel(pos.label)}
             name={names[key] ?? ""}
             onTap={() => setPickerPosition(pos)}
             readOnly={readOnly}
@@ -76,7 +76,7 @@ export function Pitch({ positions, formationName, names, players, onAssignPlayer
           const key = `${formationName}|${pickerPosition.id}`;
           return (
             <PlayerPickerDialog
-              positionLabel={positionNames[pickerPosition.label] ?? pickerPosition.label}
+              positionLabel={positionName(pickerPosition.label)}
               positionCode={pickerPosition.label}
               currentName={names[key] ?? null}
               players={players}

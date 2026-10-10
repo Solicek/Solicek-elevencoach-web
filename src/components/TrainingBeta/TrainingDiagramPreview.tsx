@@ -3,6 +3,7 @@ import { arrowMidpoint, drawArrow, drawHalfPitchLines, drawPitchLines, sizeCanva
 import { DiagramBackground } from "../../types";
 import type { TrainingDiagram } from "../../types";
 import { DiagramElementIcon } from "./DiagramElementIcon";
+import { t } from "../../lib/i18n";
 
 interface Point {
   x: number;
@@ -228,7 +229,7 @@ export function TrainingDiagramPreview({ diagram, style, zoomable = false }: Pro
             cursor: "pointer",
           }}
         >
-          Zrušit přiblížení
+          {t("beta.resetZoom")}
         </button>
       )}
     </div>

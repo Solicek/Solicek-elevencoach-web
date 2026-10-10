@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
-import { positionNames } from "../../lib/assignment";
+import { positionName, t } from "../../lib/i18n";
 import type { Player, Substitute } from "../../types";
 
 interface Props {
@@ -26,7 +26,7 @@ export function SubstitutesSection({ players, substitutes, currentStarterNames, 
   return (
     <div>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Náhradníci ({substitutes.length})
+        {t("subs.title")} ({substitutes.length})
       </p>
       <div className="spacer-8" />
       <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4 }}>
@@ -42,24 +42,24 @@ export function SubstitutesSection({ players, substitutes, currentStarterNames, 
         ))}
         {!readOnly && (
           <button className="chip" onClick={() => setShowDialog(true)}>
-            + Přidat náhradníka
+            {t("subs.add")}
           </button>
         )}
       </div>
 
       {!readOnly && showDialog && (
         <Dialog
-          title="Přidat náhradníka"
+          title={t("subs.addTitle")}
           onDismiss={() => setShowDialog(false)}
           actions={
             <button className="btn-text" onClick={() => setShowDialog(false)}>
-              Zrušit
+              {t("common.cancel")}
             </button>
           }
         >
           {availablePlayers.length === 0 ? (
             <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-              Žádní další hráči v rosteru. Přidej hráče v záložce Soupiska.
+              {t("subs.noneAvailable")}
             </p>
           ) : (
             <div style={{ maxHeight: 320, overflowY: "auto" }}>
@@ -75,7 +75,7 @@ export function SubstitutesSection({ players, substitutes, currentStarterNames, 
                 >
                   <span>{player.name}</span>
                   <span className="text-gray" style={{ fontSize: "0.75rem" }}>
-                    {player.preferredPositions.map((p) => positionNames[p] ?? p).join(", ") || "bez pozice"}
+                    {player.preferredPositions.map((p) => positionName(p)).join(", ") || t("subs.noPosition")}
                   </span>
                 </div>
               ))}

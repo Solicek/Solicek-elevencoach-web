@@ -5,6 +5,7 @@ import { Dialog } from "./Dialog";
 import { MoreIcon, PictureIcon, ShareIcon, TeamCardIcon } from "./icons";
 import { buildExportText, renderLineupImage } from "../../lib/exportLineup";
 import { shareFile, shareText } from "../../lib/share";
+import { t } from "../../lib/i18n";
 import type { Substitute } from "../../types";
 
 interface Tab {
@@ -37,11 +38,11 @@ export function AppShell({ teamCode, teamName, formationName, names, substitutes
   async function handleShareImage() {
     const blob = await renderLineupImage(formationName, names, substitutes);
     const file = new File([blob], "sestava.png", { type: "image/png" });
-    await shareFile(file, "Sestava");
+    await shareFile(file, t("nav.lineup"));
   }
 
   async function handleShareText() {
-    await shareText(buildExportText(formationName, names, substitutes), "Sestava");
+    await shareText(buildExportText(formationName, names, substitutes), t("nav.lineup"));
   }
 
   return (
@@ -51,18 +52,18 @@ export function AppShell({ teamCode, teamName, formationName, names, substitutes
           <h1 className="top-bar-title">{teamName || "…"}</h1>
           {isReadOnly && (
             <p className="text-gray" style={{ fontSize: "0.7rem", fontWeight: 700 }}>
-              👁 KAPITÁN · JEN PROHLÍŽENÍ
+              {t("shell.captainBadge")}
             </p>
           )}
         </div>
         <div className="top-bar-actions">
-          <button className="icon-btn" onClick={() => setShowTeamDialog(true)} title="Tým" aria-label="Tým">
+          <button className="icon-btn" onClick={() => setShowTeamDialog(true)} title={t("shell.team")} aria-label={t("shell.team")}>
             <TeamCardIcon />
           </button>
-          <button className="icon-btn" onClick={handleShareImage} title="Obrázek" aria-label="Obrázek">
+          <button className="icon-btn" onClick={handleShareImage} title={t("shell.image")} aria-label={t("shell.image")}>
             <PictureIcon />
           </button>
-          <button className="icon-btn" onClick={handleShareText} title="Sdílet" aria-label="Sdílet">
+          <button className="icon-btn" onClick={handleShareText} title={t("shell.share")} aria-label={t("shell.share")}>
             <ShareIcon />
           </button>
         </div>
@@ -85,18 +86,18 @@ export function AppShell({ teamCode, teamName, formationName, names, substitutes
         {moreEntries.length > 0 && (
           <button className={`bottom-nav-item ${isMoreActive ? "active" : ""}`} onClick={() => setShowMoreMenu(true)}>
             <MoreIcon />
-            <span>Více</span>
+            <span>{t("nav.more")}</span>
           </button>
         )}
       </div>
 
       {showMoreMenu && (
         <Dialog
-          title="Více"
+          title={t("nav.more")}
           onDismiss={() => setShowMoreMenu(false)}
           actions={
             <button className="btn-text" onClick={() => setShowMoreMenu(false)}>
-              Zavřít
+              {t("common.close")}
             </button>
           }
         >

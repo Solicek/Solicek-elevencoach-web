@@ -1,12 +1,6 @@
 import type { ArchivedLineup } from "../../types";
 import { competitiveOnly, computePlayerSeasonStats, computeSeasonRecord, rankColor } from "../../lib/seasonStats";
-
-/** Skloňování "zápas" pro dané číslo: 1 zápas, 2-4 zápasy, 5+ zápasů. */
-function matchWord(count: number): string {
-  if (count === 1) return "zápas";
-  if (count >= 2 && count <= 4) return "zápasy";
-  return "zápasů";
-}
+import { matchCountWord, t, tf } from "../../lib/i18n";
 
 export function SeasonSummarySection({ archive }: { archive: ArchivedLineup[] }) {
   const record = computeSeasonRecord(competitiveOnly(archive));
@@ -15,21 +9,24 @@ export function SeasonSummarySection({ archive }: { archive: ArchivedLineup[] })
   return (
     <div style={{ padding: 16 }}>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Bilance sezóny (bez přátelských) · {record.played} {matchWord(record.played)}
+        {t("season.title")} · {record.played} {matchCountWord(record.played)}
       </p>
       <div className="spacer-8" />
       <div style={{ display: "flex", gap: 28 }}>
-        <StatChip label="V" value={record.wins} color="#2E7D32" />
-        <StatChip label="R" value={record.draws} color="gray" />
-        <StatChip label="P" value={record.losses} color="var(--error)" />
+        <StatChip label={t("season.win")} value={record.wins} color="#2E7D32" />
+        <StatChip label={t("season.draw")} value={record.draws} color="gray" />
+        <StatChip label={t("season.loss")} value={record.losses} color="var(--error)" />
       </div>
       <div className="spacer-8" />
       <p className="text-gray" style={{ fontSize: "0.85rem" }}>
-        Skóre {record.goalsFor}:{record.goalsAgainst}
+        {t("season.score")} {record.goalsFor}:{record.goalsAgainst}
       </p>
       {record.missingResults > 0 && (
         <p className="text-gray" style={{ fontSize: "0.8rem", marginTop: 4 }}>
-          {record.missingResults} {matchWord(record.missingResults)} {record.missingResults === 1 ? "nemá" : "nemají"} zadaný výsledek – doplň ho v detailu zápasu, ať se počítá do bilance.
+          {tf("season.missingResults", {
+            count: String(record.missingResults),
+            word: matchCountWord(record.missingResults),
+          })}
         </p>
       )}
     </div>
@@ -54,14 +51,14 @@ export function PlayerStatsSummarySection({ archive }: { archive: ArchivedLineup
   return (
     <div style={{ padding: 16 }}>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Žebříček sezóny (bez přátelských)
+        {t("season.rankTitle")}
       </p>
       <div className="spacer-8" />
       {stats.map((s, index) => {
         const position = index + 1;
-        const parts = [`${s.goals}G ${s.assists}A`];
-        if (s.yellowCards > 0) parts.push(`${s.yellowCards}Ž`);
-        if (s.redCards > 0) parts.push(`${s.redCards}Č`);
+        const parts = [`${s.goals}${t("stats.abbrGoals")} ${s.assists}${t("stats.abbrAssists")}`];
+        if (s.yellowCards > 0) parts.push(`${s.yellowCards}${t("stats.abbrYellow")}`);
+        if (s.redCards > 0) parts.push(`${s.redCards}${t("stats.abbrRed")}`);
         const line = parts.join(" ") + (s.ratedMatches > 0 ? ` · ★${s.avgRating.toFixed(1)}` : "");
         return (
           <div key={s.name} style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>

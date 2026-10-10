@@ -4,6 +4,7 @@ import { TrainingDetailScreen } from "./TrainingDetailScreen";
 import { drillLibrary } from "../../drills";
 import { todayDateString } from "../../lib/dateUtils";
 import type { AttendanceRecord, Drill, Player, TrainingSession, TrainingTemplate } from "../../types";
+import { t, tf } from "../../lib/i18n";
 
 interface Props {
   trainings: TrainingSession[];
@@ -76,7 +77,7 @@ export function TrainingsTab({
       {trainings.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
-            {"Zatím žádné naplánované tréninky.\nPřidej první trénink a vyber cvičení z knihovny."}
+            {t("tr.empty")}
           </p>
         </div>
       ) : (
@@ -86,7 +87,9 @@ export function TrainingsTab({
             <div key={session.id} className="list-row" style={{ cursor: "pointer" }} onClick={() => setSelectedSessionId(session.id)}>
               <p className="text-bold">{session.date}</p>
               <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-                {session.blocks.length === 0 ? "Bez plánu" : `${session.blocks.length} bloků · ${totalMinutes} min`}
+                {session.blocks.length === 0
+                  ? t("tr.noPlan")
+                  : tf("tr.blocksSummary", { blocks: String(session.blocks.length), min: String(totalMinutes) })}
               </p>
             </div>
           );
@@ -101,18 +104,18 @@ export function TrainingsTab({
             setShowAddDialog(true);
           }}
         >
-          + Přidat trénink
+          {t("tr.addTraining")}
         </button>
       )}
 
       {showAddDialog && (
         <Dialog
-          title="Přidat trénink"
+          title={t("cal.addTrainingTitle")}
           onDismiss={() => setShowAddDialog(false)}
           actions={
             <>
               <button className="btn-text" onClick={() => setShowAddDialog(false)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button
                 className="btn"
@@ -125,12 +128,12 @@ export function TrainingsTab({
                   setSelectedSessionId(session.id);
                 }}
               >
-                Přidat
+                {t("common.add")}
               </button>
             </>
           }
         >
-          <label className="field-label">Datum (DD-MM-RRRR)</label>
+          <label className="field-label">{t("saveLineup.date")}</label>
           <input className="input" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
         </Dialog>
       )}

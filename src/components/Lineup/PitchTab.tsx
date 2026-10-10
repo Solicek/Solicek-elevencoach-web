@@ -4,6 +4,7 @@ import { FormationDropdown } from "../Pitch/FormationDropdown";
 import { SubstitutesSection } from "./SubstitutesSection";
 import { Dialog } from "../Shell/Dialog";
 import { formations, formationNames } from "../../formations";
+import { t } from "../../lib/i18n";
 import type { Player, PlayerPosition, Substitute } from "../../types";
 
 interface Props {
@@ -71,19 +72,19 @@ export function PitchTab({
         <>
           <div className="spacer-16" />
           <button className="btn-outline danger" onClick={() => setShowClearConfirm(true)}>
-            Smazat sestavu
+            {t("lineup.clear")}
           </button>
         </>
       )}
 
       {showClearConfirm && (
         <Dialog
-          title="Smazat sestavu?"
+          title={t("lineup.clearConfirmTitle")}
           onDismiss={() => setShowClearConfirm(false)}
           actions={
             <>
               <button className="btn-text" onClick={() => setShowClearConfirm(false)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button
                 className="btn"
@@ -93,12 +94,12 @@ export function PitchTab({
                   setShowClearConfirm(false);
                 }}
               >
-                Smazat
+                {t("common.delete")}
               </button>
             </>
           }
         >
-          <p>Opravdu chceš vyčistit sestavu? Všichni hráči se uvolní z pozic na hřišti a vyprázdní se i náhradníci.</p>
+          <p>{t("lineup.clearConfirmBody")}</p>
         </Dialog>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createTeam, resolveTeamAccess, type TeamAccess } from "../../repository/teamRepository";
+import { t, tf } from "../../lib/i18n";
 
 interface Props {
   onTeamReady: (code: string, isReadOnly: boolean) => void;
@@ -19,7 +20,7 @@ export function TeamGateScreen({ onTeamReady }: Props) {
       const code = await createTeam(newTeamName.trim());
       onTeamReady(code, false);
     } catch (e) {
-      setErrorMessage(`Založení týmu se nepovedlo: ${String(e)}`);
+      setErrorMessage(`${t("gate.createFailed")}: ${String(e)}`);
     } finally {
       setIsLoading(false);
     }
@@ -33,10 +34,10 @@ export function TeamGateScreen({ onTeamReady }: Props) {
       if (access != null) {
         setPendingJoin(access);
       } else {
-        setErrorMessage("Kód nenalezen – zkontroluj, že jsi ho opsal správně.");
+        setErrorMessage(t("gate.codeNotFound"));
       }
     } catch (e) {
-      setErrorMessage(`Připojení se nepovedlo: ${String(e)}`);
+      setErrorMessage(`${t("gate.joinFailed")}: ${String(e)}`);
     } finally {
       setIsLoading(false);
     }
@@ -44,25 +45,25 @@ export function TeamGateScreen({ onTeamReady }: Props) {
 
   return (
     <div className="screen" style={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100dvh" }}>
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>Sestava</h1>
+      <h1 style={{ fontSize: "1.75rem", fontWeight: 700 }}>{t("gate.appName")}</h1>
       <div className="spacer-8" />
-      <p className="text-gray">Založ nový tým, nebo se připoj ke kódu, který ti poslal druhý trenér.</p>
+      <p className="text-gray">{t("gate.intro")}</p>
       <div className="spacer-32" />
 
-      <label className="field-label">Název týmu</label>
+      <label className="field-label">{t("gate.teamName")}</label>
       <input className="input" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} />
       <div className="spacer-12" />
       <button className="btn" disabled={isLoading || !newTeamName.trim()} onClick={handleCreate}>
-        Založit nový tým
+        {t("gate.createTeam")}
       </button>
 
       <div className="spacer-24" />
       <p className="text-gray" style={{ textAlign: "center", fontSize: "0.85rem" }}>
-        nebo
+        {t("gate.or")}
       </p>
       <div className="spacer-24" />
 
-      <label className="field-label">Kód týmu</label>
+      <label className="field-label">{t("gate.teamCode")}</label>
       <input
         className="input"
         value={joinCode}
@@ -70,7 +71,7 @@ export function TeamGateScreen({ onTeamReady }: Props) {
       />
       <div className="spacer-12" />
       <button className="btn" disabled={isLoading || !joinCode.trim()} onClick={handleJoin}>
-        Připojit se kódem
+        {t("gate.joinWithCode")}
       </button>
 
       {isLoading && (
@@ -91,20 +92,20 @@ export function TeamGateScreen({ onTeamReady }: Props) {
       {pendingJoin && (
         <div className="dialog-overlay">
           <div className="dialog">
-            <h2>Připojit se k týmu?</h2>
+            <h2>{t("gate.joinTitle")}</h2>
             <p>
               {pendingJoin.teamName
-                ? `Chystáš se připojit k týmu "${pendingJoin.teamName}".`
-                : `Tým s tímto kódem nemá vyplněný název. Opravdu se chceš připojit?`}
+                ? tf("gate.joinNamed", { name: pendingJoin.teamName })
+                : t("gate.joinNoName")}
             </p>
             {pendingJoin.isReadOnly && (
               <p className="text-gray" style={{ fontSize: "0.85rem", marginTop: 8 }}>
-                👁 Tohle je kapitánský kód – appka se otevře jen pro prohlížení, bez možnosti cokoliv upravovat.
+                {t("gate.readOnlyNote")}
               </p>
             )}
             <div className="dialog-actions">
               <button className="btn-text" onClick={() => setPendingJoin(null)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button
                 className="btn"
@@ -115,7 +116,7 @@ export function TeamGateScreen({ onTeamReady }: Props) {
                   onTeamReady(teamCode, isReadOnly);
                 }}
               >
-                Připojit se
+                {t("gate.join")}
               </button>
             </div>
           </div>

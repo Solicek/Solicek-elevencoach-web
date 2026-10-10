@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { TrainingDiagramPreview } from "./TrainingDiagramPreview";
 import type { TrainingDiagram } from "../../types";
+import { t, tf } from "../../lib/i18n";
 
 interface Props {
   diagram: TrainingDiagram;
@@ -37,47 +38,47 @@ export function TrainingDiagramViewerDialog({ diagram, readOnly = false, onDismi
       >
         <h2 style={{ marginBottom: 16 }}>{diagram.name}</h2>
         <p className="text-gray" style={{ fontSize: "0.75rem", marginBottom: 4 }}>
-          Přiblížíš gestem dvou prstů (pinch)
+          {t("beta.pinchHint")}
         </p>
         <TrainingDiagramPreview diagram={diagram} style={{ width: "100%" }} zoomable />
         <div className="spacer-16" />
         <div style={{ display: "flex", justifyContent: readOnly ? "center" : "space-between", alignItems: "center" }}>
           {!readOnly && (
             <button className="btn-text danger" onClick={() => setShowDeleteConfirm(true)}>
-              Smazat
+              {t("common.delete")}
             </button>
           )}
           {!readOnly && (
             <button className="btn-text" onClick={onEdit}>
-              Upravit
+              {t("common.edit")}
             </button>
           )}
           <button className="btn-text" onClick={onDismiss}>
-            Zpět
+            {t("beta.back")}
           </button>
         </div>
       </div>
 
       {showDeleteConfirm && (
         <Dialog
-          title="Smazat nákres?"
+          title={t("beta.deleteTitle")}
           onDismiss={() => setShowDeleteConfirm(false)}
           actions={
             <>
               <button className="btn-text" onClick={() => setShowDeleteConfirm(false)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button
                 className="btn"
                 style={{ width: "auto", padding: "10px 20px", background: "var(--error)" }}
                 onClick={onDelete}
               >
-                Smazat
+                {t("common.delete")}
               </button>
             </>
           }
         >
-          <p>Opravdu chceš smazat nákres "{diagram.name}"?</p>
+          <p>{tf("beta.deleteBody", { name: diagram.name })}</p>
         </Dialog>
       )}
     </>

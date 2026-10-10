@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Player } from "../../types";
-import { positionNames } from "../../lib/assignment";
 import { AddPlayerDialog, EditPlayerDialog } from "./PlayerDialogs";
+import { currentLang, positionDisplayFromKey, positionName, t } from "../../lib/i18n";
 
 interface Props {
   players: Player[];
@@ -15,14 +15,14 @@ export function PlayersTab({ players, onAddPlayer, onEditPlayer, onRemovePlayer,
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<Player | null>(null);
 
-  const sorted = [...players].sort((a, b) => a.name.localeCompare(b.name, "cs"));
+  const sorted = [...players].sort((a, b) => a.name.localeCompare(b.name, currentLang()));
 
   return (
     <div style={{ position: "relative", minHeight: "60dvh" }}>
       {sorted.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
-            {"Zatím žádní hráči.\nPřidej prvního hráče!"}
+            {t("roster.empty")}
           </p>
         </div>
       ) : (
@@ -33,19 +33,19 @@ export function PlayersTab({ players, onAddPlayer, onEditPlayer, onRemovePlayer,
                 <p className="text-bold">{player.name}</p>
                 <p className="text-gray" style={{ fontSize: "0.8rem" }}>
                   {player.preferredPositions.length === 0
-                    ? "Bez pozice"
-                    : player.preferredPositions.map((p) => positionNames[p] ?? p).join(", ")}
+                    ? t("roster.noPosition")
+                    : player.preferredPositions.map((p) => positionName(p)).join(", ")}
                   {" · "}
-                  {player.positionDisplayName ?? "nehraje"}
+                  {positionDisplayFromKey(player.positionKey) ?? t("roster.notPlaying")}
                 </p>
               </div>
               {!readOnly && (
                 <>
                   <button className="btn-text" onClick={() => setEditingPlayer(player)}>
-                    Upravit
+                    {t("common.edit")}
                   </button>
                   <button className="btn-text danger" onClick={() => onRemovePlayer(player)}>
-                    Odebrat
+                    {t("common.remove")}
                   </button>
                 </>
               )}
@@ -56,7 +56,7 @@ export function PlayersTab({ players, onAddPlayer, onEditPlayer, onRemovePlayer,
 
       {!readOnly && (
         <button className="btn fab-button" onClick={() => setShowAddDialog(true)}>
-          + Přidat hráče
+          {t("roster.addPlayer")}
         </button>
       )}
 

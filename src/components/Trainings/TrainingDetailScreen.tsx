@@ -14,6 +14,8 @@ import { LiveTrainingScreen } from "./LiveTrainingScreen";
 import { positionSortOrder } from "../../lib/assignment";
 import { AttendanceKind } from "../../types";
 import type { AttendanceRecord, Drill, Player, TrainingSession, TrainingTemplate } from "../../types";
+import { storedLabel, t, tf } from "../../lib/i18n";
+import { drillText } from "../../lib/drillLabels";
 
 interface Props {
   session: TrainingSession;
@@ -93,11 +95,11 @@ export function TrainingDetailScreen({
     <div>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <button className="btn-text" onClick={onBack}>
-          ← Zpět
+          {t("detail.back")}
         </button>
         {!readOnly && (
           <button className="btn-text danger" onClick={() => setShowDeleteConfirm(true)}>
-            Smazat
+            {t("common.delete")}
           </button>
         )}
       </div>
@@ -108,12 +110,12 @@ export function TrainingDetailScreen({
 
       <div className="spacer-8" />
       <button className="btn" disabled={session.blocks.length === 0} onClick={() => setShowLiveMode(true)}>
-        ▶ Spustit trénink
+        {t("tr.start")}
       </button>
 
       <div className="spacer-12" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Docházka
+        {t("nav.attendance")}
       </p>
       <div className="spacer-8" />
       <AttendanceInlineSection
@@ -136,12 +138,14 @@ export function TrainingDetailScreen({
 
       <div className="spacer-16" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        {session.blocks.length === 0 ? "Bloky tréninku" : `Bloky tréninku · ${totalMinutes} min`}
+        {session.blocks.length === 0
+          ? t("tr.blocksTitle")
+          : tf("tr.blocksTitleWithMinutes", { min: String(totalMinutes) })}
       </p>
       <div className="spacer-8" />
       {session.blocks.length === 0 ? (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          Zatím žádné bloky. Přidej cvičení z knihovny níže, vlastní blok, nebo vlož uloženou šablonu.
+          {t("tr.noBlocks")}
         </p>
       ) : (
         session.blocks.map((block) => (
@@ -162,7 +166,7 @@ export function TrainingDetailScreen({
           <div className="spacer-8" />
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn-outline" style={{ flex: 1 }} onClick={() => setShowAddManualBlockDialog(true)}>
-              + Vlastní blok
+              {t("tr.customBlock")}
             </button>
             <button
               className="btn-outline"
@@ -170,26 +174,26 @@ export function TrainingDetailScreen({
               disabled={templates.length === 0}
               onClick={() => setShowInsertTemplateDialog(true)}
             >
-              + Vložit šablonu
+              {t("tr.insertTemplate")}
             </button>
           </div>
 
           <div className="spacer-8" />
           <button className="btn-outline" disabled={session.blocks.length === 0} onClick={() => setShowSaveTemplateDialog(true)}>
-            Uložit jako šablonu
+            {t("tr.saveAsTemplate")}
           </button>
         </>
       )}
 
       <div className="spacer-16" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Poznámky
+        {t("detail.notes")}
       </p>
       <div className="spacer-8" />
       <textarea
         className="input"
         style={{ height: 100, resize: "vertical" }}
-        placeholder="Volné poznámky k tréninku…"
+        placeholder={t("tr.notesPlaceholder")}
         value={notes}
         readOnly={readOnly}
         onChange={(e) => setNotes(e.target.value)}
@@ -198,19 +202,19 @@ export function TrainingDetailScreen({
       <div className="spacer-16" />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-          Knihovna cvičení
+          {t("tr.library")}
         </p>
         <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end" }}>
           <button className="btn-text" onClick={() => setShowDrillSourcesDialog(true)}>
-            🔗 Zdroje online
+            {t("tr.sourcesOnline")}
           </button>
           {!readOnly && (
             <>
               <button className="btn-text" onClick={() => setShowAiDrillDialog(true)}>
-                ✨ AI asistent
+                {t("tr.aiAssistant")}
               </button>
               <button className="btn-text" onClick={() => setShowAddDrillDialog(true)}>
-                + Vlastní cvičení
+                {t("tr.customDrill")}
               </button>
             </>
           )}
@@ -218,7 +222,7 @@ export function TrainingDetailScreen({
       </div>
       {!readOnly && (
         <p className="text-gray" style={{ fontSize: "0.75rem" }}>
-          Klepnutím přidáš cvičení jako blok.
+          {t("tr.tapToAdd")}
         </p>
       )}
       <div className="spacer-8" />
@@ -233,7 +237,7 @@ export function TrainingDetailScreen({
             onClick={() => toggleCategory(category)}
           >
             <p className="text-bold" style={{ fontSize: "0.9rem", color: "var(--pitch-green)" }}>
-              {category}
+              {storedLabel(category)}
             </p>
             <span className="text-gray" style={{ fontSize: "0.75rem" }}>
               {drills.length} {isExpanded ? "▾" : "▸"}
@@ -268,9 +272,9 @@ export function TrainingDetailScreen({
                   />
                 )}
                 <div style={{ flex: 1 }}>
-                  <p style={{ fontSize: "0.9rem" }}>{drill.name}</p>
+                  <p style={{ fontSize: "0.9rem" }}>{drillText(drill.name)}</p>
                   <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-                    {drill.description}
+                    {drillText(drill.description)}
                   </p>
                 </div>
                 {!readOnly && drill.isCustom && (
@@ -301,20 +305,20 @@ export function TrainingDetailScreen({
 
       {showDeleteConfirm && (
         <Dialog
-          title="Smazat trénink?"
+          title={t("tr.deleteTitle")}
           onDismiss={() => setShowDeleteConfirm(false)}
           actions={
             <>
               <button className="btn-text" onClick={() => setShowDeleteConfirm(false)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button className="btn" style={{ width: "auto", padding: "10px 20px", background: "var(--error)" }} onClick={onDeleteSession}>
-                Smazat
+                {t("common.delete")}
               </button>
             </>
           }
         >
-          <p>Opravdu chceš smazat naplánovaný trénink z {session.date}?</p>
+          <p>{tf("tr.deleteBody", { date: session.date })}</p>
         </Dialog>
       )}
 

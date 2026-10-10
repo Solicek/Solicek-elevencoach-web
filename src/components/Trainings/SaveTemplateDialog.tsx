@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
+import { t } from "../../lib/i18n";
 
 interface Props {
   onDismiss: () => void;
@@ -11,12 +12,12 @@ export function SaveTemplateDialog({ onDismiss, onConfirm }: Props) {
 
   return (
     <Dialog
-      title="Uložit jako šablonu"
+      title={t("tr.saveTemplateTitle")}
       onDismiss={onDismiss}
       actions={
         <>
           <button className="btn-text" onClick={onDismiss}>
-            Zrušit
+            {t("common.cancel")}
           </button>
           <button
             className="btn"
@@ -24,12 +25,12 @@ export function SaveTemplateDialog({ onDismiss, onConfirm }: Props) {
             disabled={!name.trim()}
             onClick={() => onConfirm(name.trim())}
           >
-            Uložit
+            {t("common.save")}
           </button>
         </>
       }
     >
-      <input className="input" placeholder="Název šablony" value={name} onChange={(e) => setName(e.target.value)} />
+      <input className="input" placeholder={t("tr.templateName")} value={name} onChange={(e) => setName(e.target.value)} />
     </Dialog>
   );
 }

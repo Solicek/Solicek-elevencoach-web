@@ -3,6 +3,7 @@ import { Dialog } from "../Shell/Dialog";
 import { DiagramPreview } from "./DiagramPreview";
 import { DrawDiagramDialog } from "./DrawDiagramDialog";
 import type { Drill, DiagramPoint } from "../../types";
+import { t } from "../../lib/i18n";
 
 interface Props {
   onDismiss: () => void;
@@ -19,12 +20,12 @@ export function AddCustomDrillDialog({ onDismiss, onConfirm }: Props) {
   return (
     <>
       <Dialog
-        title="Přidat vlastní cvičení"
+        title={t("tr.addCustomDrillTitle")}
         onDismiss={onDismiss}
         actions={
           <>
             <button className="btn-text" onClick={onDismiss}>
-              Zrušit
+              {t("common.cancel")}
             </button>
             <button
               className="btn"
@@ -41,29 +42,29 @@ export function AddCustomDrillDialog({ onDismiss, onConfirm }: Props) {
                 })
               }
             >
-              Přidat
+              {t("common.add")}
             </button>
           </>
         }
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <input className="input" placeholder="Název cvičení" value={name} onChange={(e) => setName(e.target.value)} />
+          <input className="input" placeholder={t("tr.drillName")} value={name} onChange={(e) => setName(e.target.value)} />
           <input
             className="input"
-            placeholder="Kategorie (např. Technika)"
+            placeholder={t("tr.drillCategory")}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           />
           <textarea
             className="input"
             style={{ minHeight: 80, resize: "vertical" }}
-            placeholder="Popis"
+            placeholder={t("tr.description")}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
           {diagram.length > 0 && <DiagramPreview diagram={diagram} style={{ width: "100%", aspectRatio: "0.62" }} />}
           <button className="btn-outline" onClick={() => setShowDrawDialog(true)}>
-            {diagram.length === 0 ? "+ Nakreslit náčrtek (nepovinné)" : "Upravit náčrtek"}
+            {diagram.length === 0 ? t("tr.drawDiagram") : t("tr.editDiagram")}
           </button>
         </div>
       </Dialog>

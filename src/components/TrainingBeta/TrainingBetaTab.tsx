@@ -4,6 +4,7 @@ import { TrainingDiagramEditor } from "./TrainingDiagramEditor";
 import { TrainingDiagramViewerDialog } from "./TrainingDiagramViewerDialog";
 import { TrainingDiagramPreview } from "./TrainingDiagramPreview";
 import type { TrainingDiagram } from "../../types";
+import { t } from "../../lib/i18n";
 
 interface Props {
   diagrams: TrainingDiagram[];
@@ -40,7 +41,7 @@ export function TrainingBetaTab({ diagrams, readOnly = false, onAdd, onUpdate, o
       {diagrams.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
-            {"Zatím žádné nákresy tréninků.\nVytvoř první tlačítkem dole."}
+            {t("beta.empty")}
           </p>
         </div>
       ) : (
@@ -63,7 +64,7 @@ export function TrainingBetaTab({ diagrams, readOnly = false, onAdd, onUpdate, o
                   setViewingId(diagram.id);
                 }}
               >
-                Zobrazit
+                {t("beta.show")}
               </button>
             </div>
           ))}
@@ -76,7 +77,7 @@ export function TrainingBetaTab({ diagrams, readOnly = false, onAdd, onUpdate, o
           style={{ width: "auto", left: "50%", right: "auto", transform: "translateX(-50%)", padding: "12px 24px" }}
           onClick={() => setShowNewDialog(true)}
         >
-          + Nový nákres
+          {t("beta.newDiagram")}
         </button>
       )}
 

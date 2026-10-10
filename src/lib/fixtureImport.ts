@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import { HomeAway, MatchType } from "../types";
+import { t } from "./i18n";
 
 export interface ParsedFixture {
   date: string; // DD-MM-RRRR
@@ -59,7 +60,7 @@ export function parseFixtureWorkbook(buffer: ArrayBuffer): FixtureImportResult {
   const sheetName = wb.SheetNames[0];
   const sheet = wb.Sheets[sheetName];
   const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" });
-  if (rows.length === 0) return { fixtures: [], ourTeamLabel: "", warnings: ["Soubor je prázdný."] };
+  if (rows.length === 0) return { fixtures: [], ourTeamLabel: "", warnings: [t("import.emptyFile")] };
 
   const header = rows[0].map((h) => String(h ?? ""));
   const homeCol = findColumn(header, HOME_COLUMN_NAMES);
@@ -71,7 +72,7 @@ export function parseFixtureWorkbook(buffer: ArrayBuffer): FixtureImportResult {
     return {
       fixtures: [],
       ourTeamLabel: "",
-      warnings: ["Soubor nemá očekávané sloupce (Domácí, Hosté, Datum a čas) – zkontroluj, že jde o export rozpisu zápasů z ISSF/FAČR."],
+      warnings: [t("import.wrongColumns")],
     };
   }
 
@@ -115,7 +116,7 @@ export function parseFixtureWorkbook(buffer: ArrayBuffer): FixtureImportResult {
   }
 
   if (fixtures.length === 0) {
-    warnings.push("V souboru se nenašel žádný platný řádek se zápasem.");
+    warnings.push(t("import.noRows"));
   }
 
   return { fixtures, ourTeamLabel: stripClubId(ourTeamRaw), warnings };

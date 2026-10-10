@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { drawPitchLines, drawStroke, sizeCanvasToContainer } from "../../lib/drawing";
 import type { DiagramPoint } from "../../types";
+import { t } from "../../lib/i18n";
 
 interface Props {
   initialDiagram: DiagramPoint[][];
@@ -90,19 +91,19 @@ export function DrawDiagramDialog({ initialDiagram, onDismiss, onSave }: Props) 
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <p className="text-bold">Náčrtek cvičení</p>
+        <p className="text-bold">{t("tr.diagramTitle")}</p>
         <button className="btn-text" onClick={onDismiss}>
-          Zrušit
+          {t("common.cancel")}
         </button>
       </div>
 
       <div className="spacer-8" />
       <div style={{ display: "flex", gap: 8 }}>
         <button className="btn-outline" style={{ width: "auto", padding: "8px 14px" }} onClick={() => setStrokes((s) => s.slice(0, -1))}>
-          Zpět
+          {t("tactics.undo")}
         </button>
         <button className="btn-outline danger" style={{ width: "auto", padding: "8px 14px" }} onClick={() => setStrokes([])}>
-          Vymazat
+          {t("tactics.clear")}
         </button>
       </div>
 
@@ -134,7 +135,7 @@ export function DrawDiagramDialog({ initialDiagram, onDismiss, onSave }: Props) 
           onSave(strokes.map((stroke) => stroke.map((p) => ({ x: p.x / w, y: p.y / h }))));
         }}
       >
-        Uložit náčrtek
+        {t("tr.saveDiagram")}
       </button>
     </div>
   );

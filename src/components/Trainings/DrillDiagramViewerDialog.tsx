@@ -1,6 +1,8 @@
 import { Dialog } from "../Shell/Dialog";
 import { DiagramPreview } from "./DiagramPreview";
 import type { Drill } from "../../types";
+import { t } from "../../lib/i18n";
+import { drillText } from "../../lib/drillLabels";
 
 interface Props {
   drill: Drill;
@@ -14,18 +16,18 @@ interface Props {
 export function DrillDiagramViewerDialog({ drill, onDismiss }: Props) {
   return (
     <Dialog
-      title={drill.name}
+      title={drillText(drill.name)}
       onDismiss={onDismiss}
       actions={
         <button className="btn-text" onClick={onDismiss}>
-          Zavřít
+          {t("common.close")}
         </button>
       }
     >
       <DiagramPreview diagram={drill.diagram} style={{ width: "100%", aspectRatio: "0.62" }} />
       <div className="spacer-12" />
       <p className="text-gray" style={{ fontSize: "0.85rem" }}>
-        {drill.description}
+        {drillText(drill.description)}
       </p>
     </Dialog>
   );

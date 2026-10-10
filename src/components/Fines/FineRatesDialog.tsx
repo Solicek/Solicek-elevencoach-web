@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import type { FineRates } from "../../types";
+import { t } from "../../lib/i18n";
 
 interface RateRowProps {
   label: string;
@@ -21,7 +22,7 @@ function RateRow({ label, value, onChange }: RateRowProps) {
           value={value}
           onChange={(e) => onChange(Math.max(0, Number(e.target.value) || 0))}
         />
-        <span className="text-gray">Kč</span>
+        <span className="text-gray">{t("fines.currency")}</span>
       </div>
     </div>
   );
@@ -41,28 +42,28 @@ export function FineRatesDialog({ rates, onDismiss, onConfirm }: Props) {
 
   return (
     <Dialog
-      title="Sazby pokut"
+      title={t("fines.ratesTitle")}
       onDismiss={onDismiss}
       actions={
         <>
           <button className="btn-text" onClick={onDismiss}>
-            Zrušit
+            {t("common.cancel")}
           </button>
           <button
             className="btn"
             style={{ width: "auto", padding: "10px 20px" }}
             onClick={() => onConfirm({ yellowFoul, yellowDissent, secondYellowRed, straightRed })}
           >
-            Uložit
+            {t("common.save")}
           </button>
         </>
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <RateRow label="Žlutá – faul" value={yellowFoul} onChange={setYellowFoul} />
-        <RateRow label="Žlutá – řeči" value={yellowDissent} onChange={setYellowDissent} />
-        <RateRow label="2. žlutá → červená" value={secondYellowRed} onChange={setSecondYellowRed} />
-        <RateRow label="Červená – přímá" value={straightRed} onChange={setStraightRed} />
+        <RateRow label={t("stats.yellowFoul")} value={yellowFoul} onChange={setYellowFoul} />
+        <RateRow label={t("stats.yellowDissent")} value={yellowDissent} onChange={setYellowDissent} />
+        <RateRow label={t("stats.secondYellow")} value={secondYellowRed} onChange={setSecondYellowRed} />
+        <RateRow label={t("stats.redStraight")} value={straightRed} onChange={setStraightRed} />
       </div>
     </Dialog>
   );

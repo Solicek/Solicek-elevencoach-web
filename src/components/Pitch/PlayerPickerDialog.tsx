@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { playerMatchesPositionCode } from "../../lib/assignment";
+import { positionDisplayFromKey, t } from "../../lib/i18n";
 import type { Player } from "../../types";
 
 interface Props {
@@ -38,32 +39,32 @@ export function PlayerPickerDialog({
 
   return (
     <Dialog
-      title={`Vybrat hráče – ${positionLabel}`}
+      title={`${t("picker.title")} – ${positionLabel}`}
       onDismiss={onDismiss}
       actions={
         <>
           {currentName && (
             <button className="btn-text danger" onClick={onClearSlot} style={{ marginRight: "auto" }}>
-              Uvolnit pozici
+              {t("picker.clearSlot")}
             </button>
           )}
           <button className="btn-text" onClick={onDismiss}>
-            Zrušit
+            {t("common.cancel")}
           </button>
         </>
       }
     >
       {currentName && (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          Aktuálně: {currentName}
+          {t("picker.current")}: {currentName}
         </p>
       )}
       <p className="text-bold" style={{ fontSize: "0.85rem", marginTop: 8 }}>
-        Vybrat z rosteru ({positionLabel}):
+        {t("picker.fromRoster")} ({positionLabel}):
       </p>
       {candidates.length === 0 ? (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          Žádný hráč s touto pozicí zatím není v rosteru.
+          {t("picker.noneForPosition")}
         </p>
       ) : (
         <div style={{ maxHeight: 260, overflowY: "auto" }}>
@@ -76,7 +77,7 @@ export function PlayerPickerDialog({
             >
               <span>{candidate.name}</span>
               <span className="text-gray" style={{ fontSize: "0.75rem" }}>
-                {candidate.positionDisplayName ?? "volný"}
+                {positionDisplayFromKey(candidate.positionKey) ?? t("picker.unassigned")}
               </span>
             </div>
           ))}
@@ -84,12 +85,12 @@ export function PlayerPickerDialog({
       )}
 
       <p className="text-bold" style={{ fontSize: "0.85rem", marginTop: 12 }}>
-        Nebo přidat nového hráče:
+        {t("picker.orAddNew")}
       </p>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 4 }}>
         <input
           className="input"
-          placeholder="Jméno hráče"
+          placeholder={t("picker.playerName")}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
         />
@@ -99,12 +100,12 @@ export function PlayerPickerDialog({
           disabled={!newName.trim() || isDuplicateNewName}
           onClick={() => onCreatePlayer(newName.trim())}
         >
-          Přidat
+          {t("common.add")}
         </button>
       </div>
       {isDuplicateNewName && (
         <p className="text-error" style={{ fontSize: "0.75rem", marginTop: 4 }}>
-          Hráč s tímto jménem už v rosteru je.
+          {t("picker.duplicateName")}
         </p>
       )}
     </Dialog>

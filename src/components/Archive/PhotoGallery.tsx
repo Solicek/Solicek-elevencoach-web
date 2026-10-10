@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { uploadArchivePhoto, deleteArchivePhoto } from "../../repository/photoStorage";
+import { t } from "../../lib/i18n";
 import type { ArchivedLineup } from "../../types";
 
 interface Props {
@@ -24,7 +25,7 @@ export function PhotoGallery({ teamCode, entry, onUpdateEntry, readOnly = false 
       const url = await uploadArchivePhoto(teamCode, entry.id, file);
       onUpdateEntry({ ...entry, photoPaths: [...entry.photoPaths, url] });
     } catch {
-      setError("Nahrání fotky se nezdařilo. Zkus to prosím znovu.");
+      setError(t("photos.uploadFailed"));
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -44,7 +45,7 @@ export function PhotoGallery({ teamCode, entry, onUpdateEntry, readOnly = false 
   return (
     <div>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Fotky
+        {t("photos.title")}
       </p>
       <div className="spacer-8" />
       {error && (
@@ -65,7 +66,7 @@ export function PhotoGallery({ teamCode, entry, onUpdateEntry, readOnly = false 
               background: "var(--surface-variant)",
             }}
           >
-            <img src={url} alt="Fotka poznámek" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <img src={url} alt={t("photos.alt")} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           </div>
         ))}
         {!readOnly && (
@@ -83,7 +84,7 @@ export function PhotoGallery({ teamCode, entry, onUpdateEntry, readOnly = false 
               textAlign: "center",
             }}
           >
-            {uploading ? <span className="spinner" style={{ width: 20, height: 20 }} /> : "+ Foto"}
+            {uploading ? <span className="spinner" style={{ width: 20, height: 20 }} /> : t("photos.add")}
             <input
               ref={inputRef}
               type="file"
@@ -99,22 +100,22 @@ export function PhotoGallery({ teamCode, entry, onUpdateEntry, readOnly = false 
 
       {viewerUrl && (
         <Dialog
-          title="Fotka"
+          title={t("photos.one")}
           onDismiss={() => setViewerUrl(null)}
           actions={
             <>
               <button className="btn-text" onClick={() => setViewerUrl(null)}>
-                Zavřít
+                {t("common.close")}
               </button>
               {!readOnly && (
                 <button className="btn-text danger" onClick={() => handleDelete(viewerUrl)}>
-                  Smazat
+                  {t("common.delete")}
                 </button>
               )}
             </>
           }
         >
-          <img src={viewerUrl} alt="Fotka poznámek" style={{ width: "100%", borderRadius: 8 }} />
+          <img src={viewerUrl} alt={t("photos.alt")} style={{ width: "100%", borderRadius: 8 }} />
         </Dialog>
       )}
     </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { AttendanceChecklist } from "./AttendanceChecklist";
 import type { AttendanceRecord, Player } from "../../types";
+import { t, tf } from "../../lib/i18n";
 
 interface Props {
   record: AttendanceRecord;
@@ -19,11 +20,11 @@ export function AttendanceDetailScreen({ record, players, onBack, onUpdateRecord
     <div>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <button className="btn-text" onClick={onBack}>
-          ← Zpět
+          {t("detail.back")}
         </button>
         {!readOnly && (
           <button className="btn-text danger" onClick={() => setShowDeleteConfirm(true)}>
-            Smazat
+            {t("common.delete")}
           </button>
         )}
       </div>
@@ -36,20 +37,20 @@ export function AttendanceDetailScreen({ record, players, onBack, onUpdateRecord
 
       {showDeleteConfirm && (
         <Dialog
-          title="Smazat termín?"
+          title={t("att.deleteTitle")}
           onDismiss={() => setShowDeleteConfirm(false)}
           actions={
             <>
               <button className="btn-text" onClick={() => setShowDeleteConfirm(false)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button className="btn" style={{ width: "auto", padding: "10px 20px", background: "var(--error)" }} onClick={onDeleteRecord}>
-                Smazat
+                {t("common.delete")}
               </button>
             </>
           }
         >
-          <p>Opravdu chceš smazat docházku z {record.date}?</p>
+          <p>{tf("att.deleteBody", { date: record.date })}</p>
         </Dialog>
       )}
     </div>

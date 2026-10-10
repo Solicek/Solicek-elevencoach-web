@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { TrainingSession } from "../../types";
+import { t, tf } from "../../lib/i18n";
+import { drillText } from "../../lib/drillLabels";
 
 interface Props {
   session: TrainingSession;
@@ -42,10 +44,10 @@ export function LiveTrainingScreen({ session, onExit }: Props) {
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100dvh", padding: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <p className="text-bold" style={{ fontSize: "1.1rem" }}>
-          Živý trénink
+          {t("tr.liveTitle")}
         </p>
         <button className="btn-text" onClick={onExit}>
-          Ukončit
+          {t("tr.exit")}
         </button>
       </div>
 
@@ -58,7 +60,7 @@ export function LiveTrainingScreen({ session, onExit }: Props) {
             style={i === index ? { background: "var(--primary)", color: "var(--on-primary)" } : undefined}
             onClick={() => setIndex(i)}
           >
-            {i + 1}. {block.title}
+            {i + 1}. {drillText(block.title)}
           </button>
         ))}
       </div>
@@ -66,22 +68,22 @@ export function LiveTrainingScreen({ session, onExit }: Props) {
       <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
         {isFinished ? (
           <p className="text-bold" style={{ fontSize: "1.4rem" }}>
-            Trénink dokončen! 🎉
+            {t("tr.finished")}
           </p>
         ) : (
           <div style={{ textAlign: "center" }}>
             <p className="text-gray" style={{ fontSize: "0.9rem" }}>
-              Blok {index + 1} z {blocks.length}
+              {tf("tr.blockOf", { index: String(index + 1), total: String(blocks.length) })}
             </p>
             <div className="spacer-8" />
             <p className="text-bold" style={{ fontSize: "1.4rem" }}>
-              {currentBlock.title}
+              {drillText(currentBlock.title)}
             </p>
             {currentBlock.description && (
               <>
                 <div className="spacer-8" />
                 <p className="text-gray" style={{ fontSize: "0.9rem" }}>
-                  {currentBlock.description}
+                  {drillText(currentBlock.description)}
                 </p>
               </>
             )}
@@ -95,13 +97,13 @@ export function LiveTrainingScreen({ session, onExit }: Props) {
             </p>
             {isTimeUp && (
               <p className="text-error" style={{ fontSize: "0.9rem" }}>
-                Čas vypršel
+                {t("tr.timeUp")}
               </p>
             )}
 
             <div className="spacer-24" />
             <button className="btn-outline" style={{ width: "auto", padding: "10px 24px" }} disabled={isTimeUp} onClick={() => setIsRunning((r) => !r)}>
-              {isRunning ? "Pauza" : "Pokračovat"}
+              {isRunning ? t("tr.pause") : t("tr.resume")}
             </button>
           </div>
         )}
@@ -109,7 +111,7 @@ export function LiveTrainingScreen({ session, onExit }: Props) {
 
       <div style={{ display: "flex", gap: 8 }}>
         <button className="btn-outline" style={{ flex: 1 }} disabled={index === 0} onClick={() => setIndex((i) => Math.max(0, i - 1))}>
-          ← Předchozí
+          {t("tr.previous")}
         </button>
         <button
           className="btn"
@@ -117,7 +119,7 @@ export function LiveTrainingScreen({ session, onExit }: Props) {
           disabled={index >= blocks.length}
           onClick={() => setIndex((i) => Math.min(blocks.length, i + 1))}
         >
-          {index === blocks.length - 1 ? "Dokončit" : "Další blok →"}
+          {index === blocks.length - 1 ? t("tr.finish") : t("tr.nextBlock")}
         </button>
       </div>
     </div>

@@ -14,6 +14,7 @@ import { allMatchTypes, allHomeAway, MatchType } from "../../types";
 import type { ArchivedLineup, AttendanceRecord, Player } from "../../types";
 import { homeAwayNames, matchTitle } from "../../lib/matchTitle";
 import { isOlderThanLockWindow } from "../../lib/dateUtils";
+import { formationLabel, t, tf } from "../../lib/i18n";
 
 interface ParsedResult {
   home: string;
@@ -148,11 +149,11 @@ export function ArchiveDetailScreen({
     <div>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
         <button className="btn-text" onClick={onBack}>
-          ← Zpět
+          {t("detail.back")}
         </button>
         {!forceReadOnly && (
           <button className="btn-text danger" onClick={() => setShowDeleteConfirm(true)}>
-            Smazat zápas
+            {t("detail.deleteMatch")}
           </button>
         )}
       </div>
@@ -161,22 +162,20 @@ export function ArchiveDetailScreen({
         {localEntry.result.trim() ? `${matchTitle(localEntry, teamName)} ${localEntry.result}` : matchTitle(localEntry, teamName)}
       </p>
       <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-        {localEntry.date} · {localEntry.formationName}
+        {localEntry.date} · {formationLabel(localEntry.formationName)}
       </p>
 
       {fullyLocked && (
         <>
           <div className="spacer-8" />
           <p className="text-gray" style={{ fontSize: "0.8rem", background: "var(--surface-variant)", padding: "8px 12px", borderRadius: 8 }}>
-            {forceReadOnly
-              ? "👁 Jsi přihlášený jako kapitán – tenhle zápis je jen pro čtení."
-              : "Tento zápis je starší než 2 týdny, je jen pro čtení."}
+            {forceReadOnly ? t("detail.captainReadOnly") : t("detail.olderReadOnly")}
           </p>
           {!forceReadOnly && (
             <>
               <div className="spacer-8" />
               <button className="btn-outline" onClick={() => updateLocal({ unlocked: true })}>
-                Přesto odemknout a upravit
+                {t("detail.unlockAnyway")}
               </button>
             </>
           )}
@@ -187,10 +186,10 @@ export function ArchiveDetailScreen({
           <div className="spacer-8" />
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--surface-variant)", padding: "8px 12px", borderRadius: 8 }}>
             <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-              🔓 Ručně odemknuto k úpravě (starší než 2 týdny).
+              {t("detail.manuallyUnlocked")}
             </p>
             <button className="btn-text" onClick={() => updateLocal({ unlocked: false })}>
-              Uzamknout zpět
+              {t("detail.lockBack")}
             </button>
           </div>
         </>
@@ -201,11 +200,11 @@ export function ArchiveDetailScreen({
         options={allMatchTypes}
         selected={localEntry.matchType}
         readOnly={fullyLocked}
-        onSelect={(t) => updateLocal({ matchType: t })}
+        onSelect={(value) => updateLocal({ matchType: value })}
       />
       {localEntry.matchType === MatchType.FRIENDLY && (
         <p className="text-gray" style={{ fontSize: "0.75rem", marginTop: 4 }}>
-          Přátelský zápas se nezapočítává do bilance sezóny ani žebříčku.
+          {t("detail.friendlyNote")}
         </p>
       )}
 
@@ -220,8 +219,11 @@ export function ArchiveDetailScreen({
       <div className="spacer-8" />
       <label className="field-label">
         {localEntry.homeAway
-          ? `Výsledek (${homeAwayNames(localEntry, teamName).home}:${homeAwayNames(localEntry, teamName).away})`
-          : "Výsledek"}
+          ? tf("detail.resultWith", {
+              home: homeAwayNames(localEntry, teamName).home,
+              away: homeAwayNames(localEntry, teamName).away,
+            })
+          : t("detail.result")}
       </label>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <input
@@ -250,7 +252,7 @@ export function ArchiveDetailScreen({
       {showHalfTime ? (
         <>
           <div className="spacer-8" />
-          <label className="field-label">Poločas</label>
+          <label className="field-label">{t("detail.halfTime")}</label>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <input
               className="input"
@@ -281,7 +283,7 @@ export function ArchiveDetailScreen({
                   updateLocal({ result: buildResult(parsedResult.home, parsedResult.away, "", "") });
                 }}
               >
-                Odebrat
+                {t("common.remove")}
               </button>
             )}
           </div>
@@ -289,18 +291,18 @@ export function ArchiveDetailScreen({
       ) : (
         !fullyLocked && (
           <button className="btn-text" style={{ padding: 0, marginTop: 4 }} onClick={() => setShowHalfTime(true)}>
-            + Přidat poločas
+            {t("detail.addHalfTime")}
           </button>
         )
       )}
 
       <div className="spacer-16" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Sestava
+        {t("nav.lineup")}
       </p>
       {localEntry.closed && !fullyLocked && (
         <p className="text-gray" style={{ fontSize: "0.75rem" }}>
-          Sestava je uzavřená a needitovatelná.
+          {t("detail.lineupClosed")}
         </p>
       )}
       <div className="spacer-8" />
@@ -362,12 +364,12 @@ export function ArchiveDetailScreen({
       {!fullyLocked &&
         (localEntry.closed ? (
           <button className="btn-outline" onClick={() => updateLocal({ closed: false })}>
-            Otevřít sestavu znovu
+            {t("detail.reopenLineup")}
           </button>
         ) : (
           <>
             <button className="btn" onClick={onBack}>
-              Uložit sestavu
+              {t("detail.saveLineup")}
             </button>
             <div className="spacer-8" />
             <button
@@ -379,19 +381,19 @@ export function ArchiveDetailScreen({
                 if (!attendanceRecord) onAddAttendanceRecord(createAttendanceRecord());
               }}
             >
-              Uzavřít zápas
+              {t("detail.closeMatch")}
             </button>
           </>
         ))}
 
       {showClearConfirm && (
         <Dialog
-          title="Smazat sestavu?"
+          title={t("lineup.clearConfirmTitle")}
           onDismiss={() => setShowClearConfirm(false)}
           actions={
             <>
               <button className="btn-text" onClick={() => setShowClearConfirm(false)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button
                 className="btn"
@@ -401,23 +403,23 @@ export function ArchiveDetailScreen({
                   setShowClearConfirm(false);
                 }}
               >
-                Smazat
+                {t("common.delete")}
               </button>
             </>
           }
         >
-          <p>Opravdu chceš smazat sestavu tohoto zápasu? Hráči na hřišti i náhradníci se odeberou (zápas samotný zůstane).</p>
+          <p>{t("detail.clearLineupBody")}</p>
         </Dialog>
       )}
 
       <div className="spacer-16" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Docházka
+        {t("nav.attendance")}
       </p>
       <div className="spacer-8" />
       {!localEntry.closed && !attendanceRecord && !fullyLocked ? (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          Zapíše se automaticky po uzavření zápasu.
+          {t("detail.attendanceAuto")}
         </p>
       ) : (
         <AttendanceInlineSection
@@ -433,13 +435,13 @@ export function ArchiveDetailScreen({
 
       <div className="spacer-12" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Poznámky
+        {t("detail.notes")}
       </p>
       <div className="spacer-8" />
       <textarea
         className="input"
         style={{ height: 140, resize: "vertical" }}
-        placeholder="Poznámky k tomuto zápasu…"
+        placeholder={t("detail.notesPlaceholder")}
         value={localEntry.notes}
         readOnly={fullyLocked}
         onChange={(e) => updateLocal({ notes: e.target.value })}
@@ -455,29 +457,27 @@ export function ArchiveDetailScreen({
         <>
           <div className="spacer-16" />
           <button className="btn-outline danger" onClick={() => setShowClearConfirm(true)}>
-            Smazat sestavu
+            {t("lineup.clear")}
           </button>
         </>
       )}
 
       {showDeleteConfirm && (
         <Dialog
-          title="Smazat zápas?"
+          title={t("detail.deleteMatchTitle")}
           onDismiss={() => setShowDeleteConfirm(false)}
           actions={
             <>
               <button className="btn-text" onClick={() => setShowDeleteConfirm(false)}>
-                Zrušit
+                {t("common.cancel")}
               </button>
               <button className="btn" style={{ width: "auto", padding: "10px 20px", background: "var(--error)" }} onClick={onDeleteEntry}>
-                Smazat
+                {t("common.delete")}
               </button>
             </>
           }
         >
-          <p>
-            Opravdu chceš smazat celý zápas "{localEntry.opponent}" ({localEntry.date}) včetně sestavy, poznámek a fotek?
-          </p>
+          <p>{tf("detail.deleteMatchBody", { opponent: localEntry.opponent, date: localEntry.date })}</p>
         </Dialog>
       )}
     </div>

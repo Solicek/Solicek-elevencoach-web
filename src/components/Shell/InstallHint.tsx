@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { t } from "../../lib/i18n";
 
 const DISMISSED_KEY = "install_hint_dismissed";
 
@@ -43,8 +44,10 @@ export function InstallHint() {
       }}
     >
       <p style={{ flex: 1, fontSize: "0.85rem" }}>
-        Přidej si appku na plochu: klepni na <strong>Sdílet</strong> (ikona čtverce se šipkou) a pak na{" "}
-        <strong>Přidat na plochu</strong>.
+        {t("install.hintBefore")}
+        <strong>{t("install.shareLabel")}</strong>
+        {t("install.hintBetween")}
+        <strong>{t("install.addLabel")}</strong>.
       </p>
       <button
         className="btn-text"

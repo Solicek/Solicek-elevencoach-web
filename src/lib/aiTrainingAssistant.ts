@@ -1,6 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../firebase";
 import type { DiagramPoint, Drill } from "../types";
+import { currentLang, t, type Lang } from "./i18n";
 
 /** Malý kroužek (aproximovaný mnohoúhelníkem) – v diagramu značí pozici hráče. */
 function circleStroke(center: DiagramPoint, radius: number, segments = 16): DiagramPoint[] {
@@ -45,7 +46,10 @@ interface GeminiDrillResponse {
   passSequence: number[];
 }
 
-const generateTrainingDrillFn = httpsCallable<{ promptText: string }, GeminiDrillResponse>(functions, "generateTrainingDrill");
+const generateTrainingDrillFn = httpsCallable<{ promptText: string; lang: Lang }, GeminiDrillResponse>(
+  functions,
+  "generateTrainingDrill"
+);
 
 /**
  * Nechá Gemini (přes bezpečný Cloud Function proxy, klíč nikdy nedorazí do prohlížeče) navrhnout
@@ -53,7 +57,15 @@ const generateTrainingDrillFn = httpsCallable<{ promptText: string }, GeminiDril
  * (hráči = kroužky, přihrávky = čáry se šipkami uprostřed hrany).
  */
 export async function generateDrillFromPrompt(promptText: string): Promise<Drill> {
-  const result = await generateTrainingDrillFn({ promptText });
+  // Chyby z funkce chodí česky (jsou psané pro log), uživateli se ukáže hláška v jeho jazyce
+  // podle kódu – "unavailable" je výpadek sítě/API, zbytek se neodliší.
+  let result;
+  try {
+    result = await generateTrainingDrillFn({ promptText, lang: currentLang() });
+  } catch (e) {
+    const code = (e as { code?: string }).code ?? "";
+    throw new Error(code.includes("unavailable") ? t("ai.network") : t("tr.aiFailed"));
+  }
   const data = result.data;
 
   const corners = (data.players ?? []).map((p) => ({

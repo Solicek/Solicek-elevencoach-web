@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { PositionCheckboxList } from "./PositionCheckboxList";
+import { t } from "../../lib/i18n";
 import type { Player } from "../../types";
 
 interface AddProps {
@@ -20,12 +21,12 @@ export function AddPlayerDialog({ existingNames, onDismiss, onConfirm }: AddProp
 
   return (
     <Dialog
-      title="Přidat hráče"
+      title={t("roster.addTitle")}
       onDismiss={onDismiss}
       actions={
         <>
           <button className="btn-text" onClick={onDismiss}>
-            Zrušit
+            {t("common.cancel")}
           </button>
           <button
             className="btn"
@@ -41,20 +42,20 @@ export function AddPlayerDialog({ existingNames, onDismiss, onConfirm }: AddProp
               })
             }
           >
-            Přidat
+            {t("common.add")}
           </button>
         </>
       }
     >
-      <input className="input" placeholder="Jméno hráče" value={name} onChange={(e) => setName(e.target.value)} />
+      <input className="input" placeholder={t("picker.playerName")} value={name} onChange={(e) => setName(e.target.value)} />
       {isDuplicate && (
         <p className="text-error" style={{ fontSize: "0.75rem", marginTop: 4 }}>
-          Hráč s tímto jménem už v rosteru je.
+          {t("picker.duplicateName")}
         </p>
       )}
       <div className="spacer-8" />
       <p className="text-bold" style={{ fontSize: "0.85rem" }}>
-        Pozice (lze vybrat víc):
+        {t("roster.positionsHint")}
       </p>
       <PositionCheckboxList selected={selectedPositions} onToggle={toggle} />
     </Dialog>
@@ -82,12 +83,12 @@ export function EditPlayerDialog({ player, existingNames, onDismiss, onConfirm }
 
   return (
     <Dialog
-      title="Upravit hráče"
+      title={t("roster.editTitle")}
       onDismiss={onDismiss}
       actions={
         <>
           <button className="btn-text" onClick={onDismiss}>
-            Zrušit
+            {t("common.cancel")}
           </button>
           <button
             className="btn"
@@ -95,20 +96,20 @@ export function EditPlayerDialog({ player, existingNames, onDismiss, onConfirm }
             disabled={!name.trim() || isDuplicate}
             onClick={() => onConfirm({ ...player, name: name.trim(), preferredPositions: selectedPositions })}
           >
-            Uložit
+            {t("common.save")}
           </button>
         </>
       }
     >
-      <input className="input" placeholder="Jméno hráče" value={name} onChange={(e) => setName(e.target.value)} />
+      <input className="input" placeholder={t("picker.playerName")} value={name} onChange={(e) => setName(e.target.value)} />
       {isDuplicate && (
         <p className="text-error" style={{ fontSize: "0.75rem", marginTop: 4 }}>
-          Hráč s tímto jménem už v rosteru je.
+          {t("picker.duplicateName")}
         </p>
       )}
       <div className="spacer-8" />
       <p className="text-bold" style={{ fontSize: "0.85rem" }}>
-        Pozice (lze vybrat víc):
+        {t("roster.positionsHint")}
       </p>
       <PositionCheckboxList selected={selectedPositions} onToggle={toggle} />
     </Dialog>

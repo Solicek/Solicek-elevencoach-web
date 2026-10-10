@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { ChipSelector } from "../Shell/ChipSelector";
 import { todayDateString } from "../../lib/dateUtils";
+import { t } from "../../lib/i18n";
 import { MatchType, allMatchTypes, HomeAway, allHomeAway } from "../../types";
 
 interface Props {
@@ -17,12 +18,12 @@ export function SaveLineupDialog({ onDismiss, onConfirm }: Props) {
 
   return (
     <Dialog
-      title="Uložit sestavu do archivu"
+      title={t("saveLineup.title")}
       onDismiss={onDismiss}
       actions={
         <>
           <button className="btn-text" onClick={onDismiss}>
-            Zrušit
+            {t("common.cancel")}
           </button>
           <button
             className="btn"
@@ -30,24 +31,24 @@ export function SaveLineupDialog({ onDismiss, onConfirm }: Props) {
             disabled={!date.trim() || !opponent.trim()}
             onClick={() => onConfirm(date.trim(), opponent.trim(), matchType, homeAway)}
           >
-            Uložit
+            {t("common.save")}
           </button>
         </>
       }
     >
-      <label className="field-label">Datum (DD-MM-RRRR)</label>
+      <label className="field-label">{t("saveLineup.date")}</label>
       <input className="input" value={date} onChange={(e) => setDate(e.target.value)} />
       <div className="spacer-12" />
-      <label className="field-label">S kým se hrálo</label>
+      <label className="field-label">{t("saveLineup.opponent")}</label>
       <input className="input" value={opponent} onChange={(e) => setOpponent(e.target.value)} />
       <div className="spacer-12" />
       <p className="text-bold" style={{ fontSize: "0.85rem", marginBottom: 4 }}>
-        Typ zápasu:
+        {t("saveLineup.matchType")}
       </p>
       <ChipSelector options={allMatchTypes} selected={matchType} onSelect={setMatchType} />
       <div className="spacer-12" />
       <p className="text-bold" style={{ fontSize: "0.85rem", marginBottom: 4 }}>
-        Doma / venku:
+        {t("saveLineup.homeAway")}
       </p>
       <ChipSelector options={allHomeAway} selected={homeAway} onSelect={setHomeAway} />
     </Dialog>

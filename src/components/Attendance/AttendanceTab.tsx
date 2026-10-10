@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AttendanceStatsSection } from "./AttendanceStatsSection";
 import { AttendanceDetailScreen } from "./AttendanceDetailScreen";
 import type { AttendanceRecord, Player } from "../../types";
+import { storedLabel, t, tf } from "../../lib/i18n";
 
 interface Props {
   players: Player[];
@@ -37,7 +38,7 @@ export function AttendanceTab({ players, attendance, onUpdateRecord, onDeleteRec
       {attendance.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
-            {"Zatím žádné termíny docházky.\nPřidej první trénink nebo zápas."}
+            {t("att.empty")}
           </p>
         </div>
       ) : (
@@ -51,11 +52,11 @@ export function AttendanceTab({ players, attendance, onUpdateRecord, onDeleteRec
                 <div>
                   <p className="text-bold">{record.date}</p>
                   <p className="text-gray" style={{ fontSize: "0.75rem" }}>
-                    {record.kind}
+                    {storedLabel(record.kind)}
                   </p>
                 </div>
                 <span className="text-gray" style={{ fontSize: "0.8rem" }}>
-                  {present}/{record.playerNames.length} přítomných
+                  {tf("att.presentOf", { present: String(present), total: String(record.playerNames.length) })}
                 </span>
               </div>
             );

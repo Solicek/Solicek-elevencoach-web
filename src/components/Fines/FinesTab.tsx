@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { FineRatesDialog } from "./FineRatesDialog";
 import { computeFineLineItems, finePaymentId } from "../../lib/fines";
 import type { ArchivedLineup, FinePayment, FineRates } from "../../types";
+import { amountLabel, t, tf } from "../../lib/i18n";
 
 interface Props {
   archive: ArchivedLineup[];
@@ -39,11 +40,11 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
     <div style={{ padding: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <p className="text-bold" style={{ fontSize: "1.1rem" }}>
-          Pokuty
+          {t("fines.title")}
         </p>
         {!readOnly && (
           <button className="btn-text" onClick={() => setShowRatesDialog(true)}>
-            ⚙ Sazby
+            {t("fines.rates")}
           </button>
         )}
       </div>
@@ -51,21 +52,24 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
       {lineItems.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "40dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
-            {"Zatím žádné pokutované karty.\nKarty se zadávají u statistik hráčů v detailu zápasu."}
+            {t("fines.empty")}
           </p>
         </div>
       ) : (
         <>
           <div className="spacer-16" />
           <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-            Souhrn dle hráče
+            {t("fines.summaryTitle")}
           </p>
           <div className="spacer-8" />
           {perPlayer.map(({ name, owed, paid, remaining }) => (
             <div key={name} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
               <span>{name}</span>
               <span className="text-gray" style={{ fontSize: "0.8rem" }}>
-                {remaining > 0 ? `zbývá ${remaining} Kč` : "zaplaceno"} <span style={{ opacity: 0.7 }}>({paid}/{owed} Kč)</span>
+                {remaining > 0 ? tf("fines.remaining", { amount: amountLabel(remaining) }) : t("fines.paid")}{" "}
+                <span style={{ opacity: 0.7 }}>
+                  ({paid}/{amountLabel(owed)})
+                </span>
               </span>
             </div>
           ))}
@@ -74,7 +78,7 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
           <hr style={{ border: "none", borderTop: "1px solid var(--divider)" }} />
           <div className="spacer-8" />
           <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-            Jednotlivé karty
+            {t("fines.individualCards")}
           </p>
           <div className="spacer-8" />
           {lineItems.map((item) => {
@@ -103,7 +107,7 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                   <span className="text-gray" style={{ fontSize: "0.85rem" }}>
-                    {item.amount} Kč
+                    {amountLabel(item.amount)}
                   </span>
                   <input type="checkbox" checked={paid} readOnly />
                 </div>

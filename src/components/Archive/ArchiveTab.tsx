@@ -5,6 +5,7 @@ import { ArchiveDetailScreen } from "./ArchiveDetailScreen";
 import { MatchType } from "../../types";
 import { matchTitle } from "../../lib/matchTitle";
 import { compareDateStrings, todayDateString } from "../../lib/dateUtils";
+import { formationLabel, storedLabel, t } from "../../lib/i18n";
 
 interface Props {
   teamCode: string;
@@ -70,7 +71,7 @@ export function ArchiveTab({
       {playedArchive.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
           <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
-            {"Zatím žádné odehrané zápasy.\nNadcházející zápasy najdeš v Kalendáři."}
+            {t("archive.empty")}
           </p>
         </div>
       ) : (
@@ -85,8 +86,8 @@ export function ArchiveTab({
                   {entry.result ? `${matchTitle(entry, teamName)} ${entry.result}` : matchTitle(entry, teamName)}
                 </p>
                 <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-                  {entry.date} · {entry.formationName}
-                  {entry.matchType === MatchType.FRIENDLY ? " · Přátelské" : ""}
+                  {entry.date} · {formationLabel(entry.formationName)}
+                  {entry.matchType === MatchType.FRIENDLY ? ` · ${storedLabel(MatchType.FRIENDLY)}` : ""}
                 </p>
               </div>
               {entry.photoPaths.length > 0 && (

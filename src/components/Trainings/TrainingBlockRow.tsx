@@ -1,4 +1,5 @@
 import type { TrainingBlock } from "../../types";
+import { drillText } from "../../lib/drillLabels";
 
 interface Props {
   block: TrainingBlock;
@@ -12,11 +13,11 @@ export function TrainingBlockRow({ block, onMinutesChange, onRemove, readOnly = 
     <div className="list-row">
       <div style={{ flex: 1 }}>
         <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-          {block.title}
+          {drillText(block.title)}
         </p>
         {block.description && (
           <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-            {block.description}
+            {drillText(block.description)}
           </p>
         )}
       </div>

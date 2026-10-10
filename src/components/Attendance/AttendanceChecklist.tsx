@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import type { AttendanceRecord, Player } from "../../types";
+import { t, tf } from "../../lib/i18n";
 
 interface Props {
   record: AttendanceRecord;
@@ -27,12 +28,12 @@ export function AttendanceChecklist({ record, players, onUpdate, readOnly = fals
   return (
     <div>
       <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-        {presentCount}/{record.playerNames.length} přítomných
+        {tf("att.presentOf", { present: String(presentCount), total: String(record.playerNames.length) })}
       </p>
       <div className="spacer-8" />
       {record.playerNames.length === 0 ? (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          V rosteru nebyli žádní hráči.
+          {t("att.noPlayersWere")}
         </p>
       ) : (
         record.playerNames.map((name) => {
@@ -55,18 +56,18 @@ export function AttendanceChecklist({ record, players, onUpdate, readOnly = fals
         <>
           <div className="spacer-8" />
           <button className="btn-outline" onClick={() => setShowAddPlayerDialog(true)}>
-            + Přidat hráče do docházky
+            {t("att.addPlayer")}
           </button>
         </>
       )}
 
       {!readOnly && showAddPlayerDialog && (
         <Dialog
-          title="Přidat hráče do docházky"
+          title={t("att.addPlayerTitle")}
           onDismiss={() => setShowAddPlayerDialog(false)}
           actions={
             <button className="btn-text" onClick={() => setShowAddPlayerDialog(false)}>
-              Zrušit
+              {t("common.cancel")}
             </button>
           }
         >
@@ -102,13 +103,13 @@ export function AttendanceInlineSection({ record, players, onCreate, onUpdate, r
     if (readOnly) {
       return (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          Docházka nebyla zapsána.
+          {t("att.notRecorded")}
         </p>
       );
     }
     return (
       <button className="btn-outline" onClick={onCreate}>
-        Zapsat docházku
+        {t("att.record")}
       </button>
     );
   }

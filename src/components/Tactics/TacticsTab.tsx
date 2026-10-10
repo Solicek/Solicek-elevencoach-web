@@ -3,6 +3,7 @@ import { drawArrow, drawPitchLines, drawStroke, sizeCanvasToContainer } from "..
 import { allArrowStyles, ArrowStyle } from "../../types";
 import { ArrowStyleIcon } from "../TrainingBeta/ArrowStyleIcon";
 import { formations } from "../../formations";
+import { formationLabel, positionCodeLabel, storedLabel, t, tf } from "../../lib/i18n";
 
 interface Point {
   x: number;
@@ -130,18 +131,18 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
   return (
     <div>
       <p className="text-bold" style={{ fontSize: "0.85rem" }}>
-        {matchLabel ? `Příprava na: ${matchLabel}` : "Živá sestava"}
+        {matchLabel ? tf("tactics.preparingFor", { match: matchLabel }) : t("tactics.liveLineup")}
       </p>
       <div className="spacer-8" />
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
         <p className="text-gray" style={{ fontSize: "0.8rem", flex: 1 }}>
-          Rozestavení: {formationName}
+          {t("lineup.formation")}: {formationLabel(formationName)}
         </p>
         <button className="btn-text" onClick={() => setArrows((a) => a.slice(0, -1))}>
-          Zpět
+          {t("tactics.undo")}
         </button>
         <button className="btn-text danger" onClick={() => setArrows([])}>
-          Vymazat
+          {t("tactics.clear")}
         </button>
       </div>
 
@@ -151,7 +152,7 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
           <button
             key={style}
             onClick={() => setActiveStyle((prev) => (prev === style ? null : style))}
-            title={style}
+            title={storedLabel(style)}
             style={{
               flexShrink: 0,
               display: "flex",
@@ -170,7 +171,7 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
       </div>
       {activeStyle === null && (
         <p className="text-gray" style={{ fontSize: "0.75rem", marginTop: 4 }}>
-          Volné kreslení – tažením nakreslíš libovolný tvar. Klepnutím na styl šipky se vrátíš k šipkám.
+          {t("tactics.freeDrawHint")}
         </p>
       )}
 
@@ -216,7 +217,7 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
                   color: "var(--pitch-green)",
                 }}
               >
-                {pos.label}
+                {positionCodeLabel(pos.label)}
               </div>
               {name && (
                 <div

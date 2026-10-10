@@ -1,18 +1,19 @@
 import { formations } from "../formations";
 import type { Substitute } from "../types";
+import { formationLabel, positionCodeLabel, t, tf } from "./i18n";
 
 /** Textový export sestavy (pro tlačítko "Sdílet") – přepis buildExportText() z Androidu 1:1. */
 export function buildExportText(formationName: string, names: Record<string, string>, substitutes: Substitute[]): string {
   const positions = [...(formations[formationName] ?? [])].sort((a, b) => a.yPercent - b.yPercent);
-  const lines = [`Sestava - ${formationName}`, ""];
+  const lines = [tf("export.header", { formation: formationLabel(formationName) }), ""];
   for (const pos of positions) {
     const key = `${formationName}|${pos.id}`;
     const name = names[key]?.trim() || "-";
-    lines.push(`${pos.label}: ${name}`);
+    lines.push(`${positionCodeLabel(pos.label)}: ${name}`);
   }
   if (substitutes.length > 0) {
     lines.push("");
-    lines.push("Náhradníci:");
+    lines.push(t("export.substitutes"));
     for (const s of substitutes) lines.push(`- ${s.name}`);
   }
   return lines.join("\n");
@@ -51,7 +52,7 @@ export function renderLineupImage(formationName: string, names: Record<string, s
   ctx.fillStyle = "black";
   ctx.font = "bold 44px sans-serif";
   ctx.textAlign = "left";
-  ctx.fillText(`Sestava – ${formationName}`, margin, 64);
+  ctx.fillText(tf("export.header", { formation: formationLabel(formationName) }), margin, 64);
 
   const pitchTop = 100;
   const pitchBottom = height - 260;
@@ -98,7 +99,7 @@ export function renderLineupImage(formationName: string, names: Record<string, s
     ctx.fillStyle = "#2E7D32";
     ctx.font = "bold 32px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(pos.label, cx, cy + 11);
+    ctx.fillText(positionCodeLabel(pos.label), cx, cy + 11);
 
     const key = `${formationName}|${pos.id}`;
     const name = names[key]?.trim();
@@ -119,11 +120,11 @@ export function renderLineupImage(formationName: string, names: Record<string, s
   ctx.font = "bold 32px sans-serif";
   ctx.textAlign = "left";
   const subsTitleY = pitchBottom + 56;
-  ctx.fillText("Náhradníci:", margin, subsTitleY);
+  ctx.fillText(t("export.substitutes"), margin, subsTitleY);
 
   ctx.fillStyle = "#444";
   ctx.font = "28px sans-serif";
-  const subsText = substitutes.length > 0 ? substitutes.map((s) => s.name).join(", ") : "žádní";
+  const subsText = substitutes.length > 0 ? substitutes.map((s) => s.name).join(", ") : t("export.noSubstitutes");
   const wrapped = wrapText(ctx, subsText, pitchWidth);
   wrapped.forEach((line, i) => ctx.fillText(line, margin, subsTitleY + 44 + i * 36));
 

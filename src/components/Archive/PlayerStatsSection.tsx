@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { Dialog } from "../Shell/Dialog";
 import { HomeAway } from "../../types";
 import type { ArchivedLineup, PlayerMatchStat } from "../../types";
+import { t, tf } from "../../lib/i18n";
 
 const emptyStat: PlayerMatchStat = {
   goals: 0,
@@ -54,12 +55,12 @@ function checkGoalsAgainstResult(entry: ArchivedLineup): GoalCheck | null {
   }
 
   if (sumGoals !== ourScore) {
-    return { ok: false, message: `Součet gólů hráčů (${sumGoals}) neodpovídá výsledku (${ourScore}).` };
+    return { ok: false, message: tf("stats.goalsMismatch", { sum: String(sumGoals), score: String(ourScore) }) };
   }
   if (sumOwnGoals > theirScore) {
-    return { ok: false, message: `Zadané vlastní góly (${sumOwnGoals}) neodpovídají skóre soupeře (${theirScore}).` };
+    return { ok: false, message: tf("stats.ownGoalsMismatch", { sum: String(sumOwnGoals), score: String(theirScore) }) };
   }
-  return { ok: true, message: `Góly odpovídají výsledku ${score.home}:${score.away}.` };
+  return { ok: true, message: tf("stats.goalsMatch", { score: `${score.home}:${score.away}` }) };
 }
 
 interface Props {
@@ -82,7 +83,7 @@ export function PlayerStatsSection({ entry, onUpdateEntry, readOnly = false }: P
   return (
     <div>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        Statistiky hráčů
+        {t("stats.title")}
       </p>
       <div className="spacer-8" />
       {goalCheck && (
@@ -104,15 +105,15 @@ export function PlayerStatsSection({ entry, onUpdateEntry, readOnly = false }: P
       )}
       {participants.length === 0 ? (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          V sestavě zatím nejsou žádní hráči.
+          {t("stats.noPlayers")}
         </p>
       ) : (
         participants.map((name) => {
           const stat = entry.playerStats[name] ?? emptyStat;
-          const parts = [`${stat.goals}G ${stat.assists}A`];
-          if (stat.ownGoals > 0) parts.push(`${stat.ownGoals}VG`);
-          if (stat.yellowCards > 0) parts.push(`${stat.yellowCards}Ž`);
-          if (stat.redCards > 0) parts.push(`${stat.redCards}Č`);
+          const parts = [`${stat.goals}${t("stats.abbrGoals")} ${stat.assists}${t("stats.abbrAssists")}`];
+          if (stat.ownGoals > 0) parts.push(`${stat.ownGoals}${t("stats.abbrOwnGoals")}`);
+          if (stat.yellowCards > 0) parts.push(`${stat.yellowCards}${t("stats.abbrYellow")}`);
+          if (stat.redCards > 0) parts.push(`${stat.redCards}${t("stats.abbrRed")}`);
           const line = parts.join(" ") + (stat.rating > 0 ? ` · ${starDisplay(stat.rating)}` : "");
           return (
             <div
@@ -222,24 +223,24 @@ function EditPlayerStatDialog({ name, stat, onDismiss, onConfirm }: EditProps) {
       actions={
         <>
           <button className="btn-text" onClick={onDismiss}>
-            Zrušit
+            {t("common.cancel")}
           </button>
           <button className="btn" style={{ width: "auto", padding: "10px 20px" }} onClick={handleConfirm}>
-            Uložit
+            {t("common.save")}
           </button>
         </>
       }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        <StatCounterRow label="Góly" value={goals} onChange={setGoals} />
-        <StatCounterRow label="Vlastní gól" value={ownGoals} onChange={setOwnGoals} />
-        <StatCounterRow label="Asistence" value={assists} onChange={setAssists} />
-        <StatCounterRow label="Žlutá – faul" value={yellowFoulCards} onChange={setYellowFoulCards} />
-        <StatCounterRow label="Žlutá – řeči" value={yellowDissentCards} onChange={setYellowDissentCards} />
-        <StatCounterRow label="Červená – přímá" value={straightRedCards} onChange={setStraightRedCards} />
-        <StatCounterRow label="2. žlutá → červená" value={secondYellowRedCards} onChange={setSecondYellowRedCards} />
+        <StatCounterRow label={t("stats.goals")} value={goals} onChange={setGoals} />
+        <StatCounterRow label={t("stats.ownGoal")} value={ownGoals} onChange={setOwnGoals} />
+        <StatCounterRow label={t("stats.assists")} value={assists} onChange={setAssists} />
+        <StatCounterRow label={t("stats.yellowFoul")} value={yellowFoulCards} onChange={setYellowFoulCards} />
+        <StatCounterRow label={t("stats.yellowDissent")} value={yellowDissentCards} onChange={setYellowDissentCards} />
+        <StatCounterRow label={t("stats.redStraight")} value={straightRedCards} onChange={setStraightRedCards} />
+        <StatCounterRow label={t("stats.secondYellow")} value={secondYellowRedCards} onChange={setSecondYellowRedCards} />
         <div>
-          <p style={{ marginBottom: 6 }}>Hodnocení</p>
+          <p style={{ marginBottom: 6 }}>{t("stats.rating")}</p>
           <StarRatingInput rating={rating} onRatingChange={setRating} />
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { formationLabel, t } from "../../lib/i18n";
 
 interface Props {
   selected: string;
@@ -27,9 +28,9 @@ export function FormationDropdown({ selected, options, onSelected, readOnly = fa
       >
         <div>
           <p className="text-gray" style={{ fontSize: "0.75rem" }}>
-            Rozestavení
+            {t("lineup.formation")}
           </p>
-          <p>{selected}</p>
+          <p>{formationLabel(selected)}</p>
         </div>
         {!readOnly && <span>▾</span>}
       </div>
@@ -61,7 +62,7 @@ export function FormationDropdown({ selected, options, onSelected, readOnly = fa
                 }}
                 style={{ padding: "12px 16px", cursor: "pointer" }}
               >
-                {option}
+                {formationLabel(option)}
               </div>
             ))}
           </div>
