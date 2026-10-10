@@ -278,7 +278,17 @@ export const STRINGS = {
   "att.avgTitle": { cs: "Celková průměrná účast", en: "Overall average attendance" },
   "att.total": { cs: "Celkem", en: "Total" },
   "att.matches": { cs: "Zápasy", en: "Matches" },
-  "att.sessionsCount": { cs: "{count} termínů", en: "{count} sessions" },
+  "att.competitiveMatches": { cs: "Soutěžní zápasy", en: "Competitive matches" },
+  "att.friendlyMatches": { cs: "Přátelské zápasy", en: "Friendly matches" },
+  // Zkratky do rozpadu u hráče ("T 12/15 · S 6/6 · P 1/2")
+  "att.abbrTraining": { cs: "T", en: "T" },
+  "att.abbrCompetitive": { cs: "S", en: "C" },
+  "att.abbrFriendly": { cs: "P", en: "F" },
+  "att.sessionsCount": { cs: "{count} {word}", en: "{count} {word}" },
+  // Skloňování "termín": 1 / 2–4 / 5+ (angličtina rozlišuje jen jednotné a množné)
+  "att.sessionOne": { cs: "termín", en: "session" },
+  "att.sessionFew": { cs: "termíny", en: "sessions" },
+  "att.sessionMany": { cs: "termínů", en: "sessions" },
   "att.perPlayerTitle": { cs: "Statistika docházky podle hráče", en: "Attendance per player" },
   "att.noPlayersInRoster": { cs: "Zatím nejsou žádní hráči v rosteru.", en: "There are no players in the roster yet." },
   "att.noPlayersWere": { cs: "V rosteru nebyli žádní hráči.", en: "There were no players in the roster." },
@@ -541,6 +551,13 @@ export function matchCountWord(count: number): string {
   if (count === 1) return t("season.matchOne");
   if (count >= 2 && count <= 4) return t("season.matchFew");
   return t("season.matchMany");
+}
+
+/** Skloňování "termín" podle počtu: 1 termín, 2–4 termíny, 5+ termínů. */
+export function sessionCountWord(count: number): string {
+  if (count === 1) return t("att.sessionOne");
+  if (count >= 2 && count <= 4) return t("att.sessionFew");
+  return t("att.sessionMany");
 }
 
 /** Varianta s doplněním `{placeholder}` – `tf("gate.joinNamed", { name: "Slavia" })`. */

@@ -200,7 +200,14 @@ export function ArchiveDetailScreen({
         options={allMatchTypes}
         selected={localEntry.matchType}
         readOnly={fullyLocked}
-        onSelect={(value) => updateLocal({ matchType: value })}
+        onSelect={(value) => {
+          updateLocal({ matchType: value });
+          // Docházka si druh termínu pamatuje od svého založení – bez téhle aktualizace by
+          // zápas po přepnutí typu zůstal ve statistice docházky v původní kategorii.
+          if (attendanceRecord && attendanceRecord.kind !== value) {
+            onUpdateAttendanceRecord({ ...attendanceRecord, kind: value });
+          }
+        }}
       />
       {localEntry.matchType === MatchType.FRIENDLY && (
         <p className="text-gray" style={{ fontSize: "0.75rem", marginTop: 4 }}>

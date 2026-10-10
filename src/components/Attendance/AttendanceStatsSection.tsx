@@ -1,7 +1,7 @@
 import { positionSortOrder } from "../../lib/assignment";
-import { AttendanceKind } from "../../types";
+import { AttendanceKind, MatchType } from "../../types";
 import type { AttendanceRecord, Player } from "../../types";
-import { t, tf } from "../../lib/i18n";
+import { sessionCountWord, t, tf } from "../../lib/i18n";
 
 /** Průměr z poměrů přítomnosti jednotlivých termínů (každý termín se počítá stejnou vahou). */
 function averageAttendance(records: AttendanceRecord[]): { average: number | null; count: number } {
@@ -19,7 +19,10 @@ function OverallStatRow({ label, average, count }: { label: string; average: num
       <span className="text-gray" style={{ fontSize: "0.8rem" }}>
         {average === null
           ? "–"
-          : `${Math.round(average * 100)} % (${tf("att.sessionsCount", { count: String(count) })})`}
+          : `${Math.round(average * 100)} % (${tf("att.sessionsCount", {
+              count: String(count),
+              word: sessionCountWord(count),
+            })})`}
       </span>
     </div>
   );
@@ -31,25 +34,41 @@ export function AttendanceStatsSection({ players, attendance }: { players: Playe
     names = Array.from(new Set(attendance.flatMap((a) => a.playerNames)));
   }
 
+  // Druh termínu se bere z AttendanceRecord.kind, kam se při založení zkopíruje typ zápasu
+  // ("Soutěžní"/"Přátelské") nebo "Trénink". Starší záznamy bez rozpoznaného druhu spadnou
+  // do soutěžních – tak se chovaly i dřív, kdy se zápasy nerozlišovaly.
+  const trainingRecords = attendance.filter((a) => a.kind === AttendanceKind.TRAINING);
+  const friendlyRecords = attendance.filter((a) => a.kind === MatchType.FRIENDLY);
+  const competitiveRecords = attendance.filter(
+    (a) => a.kind !== AttendanceKind.TRAINING && a.kind !== MatchType.FRIENDLY
+  );
+
+  function presentCount(name: string, records: AttendanceRecord[]): number {
+    return records.filter((a) => a.playerNames.includes(name) && !a.absentNames.includes(name)).length;
+  }
+
   // Jmenovatel je pro všechny hráče stejný – celkový počet zapsaných termínů (tréninky
   // i zápasy dohromady), ne jen termíny, kde se hráčovo jméno náhodou objevuje
   // v playerNames (to by kolísalo podle toho, kdy byl hráč přidán do soupisky).
   const stats = names
-    .map((name) => {
-      const present = attendance.filter((a) => a.playerNames.includes(name) && !a.absentNames.includes(name)).length;
-      return { name, present, total: attendance.length };
-    })
+    .map((name) => ({
+      name,
+      present: presentCount(name, attendance),
+      total: attendance.length,
+      training: { present: presentCount(name, trainingRecords), total: trainingRecords.length },
+      competitive: { present: presentCount(name, competitiveRecords), total: competitiveRecords.length },
+      friendly: { present: presentCount(name, friendlyRecords), total: friendlyRecords.length },
+    }))
     .sort((a, b) => {
       const ratioA = a.total === 0 ? -1 : a.present / a.total;
       const ratioB = b.total === 0 ? -1 : b.present / b.total;
       return ratioB - ratioA || a.name.localeCompare(b.name);
     });
 
-  const trainingRecords = attendance.filter((a) => a.kind === AttendanceKind.TRAINING);
-  const matchRecords = attendance.filter((a) => a.kind !== AttendanceKind.TRAINING);
   const overall = averageAttendance(attendance);
   const trainingStats = averageAttendance(trainingRecords);
-  const matchStats = averageAttendance(matchRecords);
+  const competitiveStats = averageAttendance(competitiveRecords);
+  const friendlyStats = averageAttendance(friendlyRecords);
 
   return (
     <div style={{ padding: 16 }}>
@@ -59,7 +78,8 @@ export function AttendanceStatsSection({ players, attendance }: { players: Playe
       <div className="spacer-8" />
       <OverallStatRow label={t("att.total")} average={overall.average} count={overall.count} />
       <OverallStatRow label={t("nav.trainings")} average={trainingStats.average} count={trainingStats.count} />
-      <OverallStatRow label={t("att.matches")} average={matchStats.average} count={matchStats.count} />
+      <OverallStatRow label={t("att.competitiveMatches")} average={competitiveStats.average} count={competitiveStats.count} />
+      <OverallStatRow label={t("att.friendlyMatches")} average={friendlyStats.average} count={friendlyStats.count} />
 
       <div className="spacer-16" />
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
@@ -71,14 +91,33 @@ export function AttendanceStatsSection({ players, attendance }: { players: Playe
           {t("att.noPlayersInRoster")}
         </p>
       ) : (
-        stats.map(({ name, present, total }) => (
-          <div key={name} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span>{name}</span>
-            <span className="text-gray" style={{ fontSize: "0.8rem" }}>
-              {total === 0 ? "–" : `${present}/${total} (${Math.round((present * 100) / total)} %)`}
-            </span>
-          </div>
-        ))
+        stats.map(({ name, present, total, training, competitive, friendly }) => {
+          // Rozpad se ukazuje jen pro druhy, které vůbec nějaký termín mají – jinak by
+          // u týmu bez přátelských zápasů svítilo zbytečné "P 0/0".
+          const breakdown = [
+            { label: t("att.abbrTraining"), ...training },
+            { label: t("att.abbrCompetitive"), ...competitive },
+            { label: t("att.abbrFriendly"), ...friendly },
+          ]
+            .filter((part) => part.total > 0)
+            .map((part) => `${part.label} ${part.present}/${part.total}`)
+            .join(" · ");
+          return (
+            <div key={name} style={{ marginBottom: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{name}</span>
+                <span className="text-gray" style={{ fontSize: "0.8rem" }}>
+                  {total === 0 ? "–" : `${present}/${total} (${Math.round((present * 100) / total)} %)`}
+                </span>
+              </div>
+              {breakdown && (
+                <p className="text-gray" style={{ fontSize: "0.7rem", textAlign: "right" }}>
+                  {breakdown}
+                </p>
+              )}
+            </div>
+          );
+        })
       )}
     </div>
   );
