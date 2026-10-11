@@ -3,6 +3,8 @@ import { FineRatesDialog } from "./FineRatesDialog";
 import { computeFineLineItems, finePaymentId } from "../../lib/fines";
 import type { ArchivedLineup, FinePayment, FineRates } from "../../types";
 import { amountLabel, t, tf } from "../../lib/i18n";
+import { defaultSeasonStartYear, inSeason, listSeasonStartYears } from "../../lib/season";
+import { SeasonSelector } from "../Shell/SeasonSelector";
 
 interface Props {
   archive: ArchivedLineup[];
@@ -16,7 +18,13 @@ interface Props {
 export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, onSetPaid, readOnly = false }: Props) {
   const [showRatesDialog, setShowRatesDialog] = useState(false);
 
-  const lineItems = useMemo(() => computeFineLineItems(archive, fineRates), [archive, fineRates]);
+  // Pokuty se po sezóně typicky vyrovnávají, takže se počítají jen z vybrané sezóny.
+  const seasons = useMemo(() => listSeasonStartYears(archive.map((e) => e.date)), [archive]);
+  const [selectedSeason, setSelectedSeason] = useState<number | null | undefined>(undefined);
+  const activeSeason = selectedSeason === undefined ? defaultSeasonStartYear(seasons) : selectedSeason;
+  const seasonArchive = useMemo(() => inSeason(archive, activeSeason), [archive, activeSeason]);
+
+  const lineItems = useMemo(() => computeFineLineItems(seasonArchive, fineRates), [seasonArchive, fineRates]);
   const paidLookup = useMemo(() => {
     const map = new Map<string, boolean>();
     for (const p of finePayments) map.set(finePaymentId(p.matchId, p.playerName), p.paid);
@@ -48,6 +56,9 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
           </button>
         )}
       </div>
+
+      <div className="spacer-8" />
+      <SeasonSelector seasons={seasons} selected={activeSeason} onSelect={setSelectedSeason} />
 
       {lineItems.length === 0 ? (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "40dvh" }}>

@@ -244,6 +244,15 @@ export const STRINGS = {
   "stats.rating": { cs: "Hodnocení", en: "Rating" },
 
   // Bilance a žebříček sezóny
+  "season.all": { cs: "Vše", en: "All" },
+  "season.titleNamed": {
+    cs: "Bilance sezóny {season} (bez přátelských)",
+    en: "Season record {season} (friendlies excluded)",
+  },
+  "season.rankTitleNamed": {
+    cs: "Žebříček sezóny {season} (bez přátelských)",
+    en: "Season rankings {season} (friendlies excluded)",
+  },
   "season.title": { cs: "Bilance sezóny (bez přátelských)", en: "Season record (friendlies excluded)" },
   "season.rankTitle": { cs: "Žebříček sezóny (bez přátelských)", en: "Season rankings (friendlies excluded)" },
   "season.win": { cs: "V", en: "W" },

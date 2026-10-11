@@ -2,14 +2,15 @@ import type { ArchivedLineup } from "../../types";
 import { competitiveOnly, computePlayerSeasonStats, computeSeasonRecord, rankColor } from "../../lib/seasonStats";
 import { matchCountWord, t, tf } from "../../lib/i18n";
 
-export function SeasonSummarySection({ archive }: { archive: ArchivedLineup[] }) {
+export function SeasonSummarySection({ archive, seasonName }: { archive: ArchivedLineup[]; seasonName?: string | null }) {
   const record = computeSeasonRecord(competitiveOnly(archive));
   if (record.played === 0) return null;
 
   return (
     <div style={{ padding: 16 }}>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        {t("season.title")} · {record.played} {matchCountWord(record.played)}
+        {seasonName ? tf("season.titleNamed", { season: seasonName }) : t("season.title")} ·{" "}
+        {record.played} {matchCountWord(record.played)}
       </p>
       <div className="spacer-8" />
       <div style={{ display: "flex", gap: 28 }}>
@@ -44,14 +45,14 @@ function StatChip({ label, value, color }: { label: string; value: number; color
   );
 }
 
-export function PlayerStatsSummarySection({ archive }: { archive: ArchivedLineup[] }) {
+export function PlayerStatsSummarySection({ archive, seasonName }: { archive: ArchivedLineup[]; seasonName?: string | null }) {
   const stats = computePlayerSeasonStats(competitiveOnly(archive));
   if (stats.length === 0) return null;
 
   return (
     <div style={{ padding: 16 }}>
       <p className="text-bold" style={{ fontSize: "0.9rem" }}>
-        {t("season.rankTitle")}
+        {seasonName ? tf("season.rankTitleNamed", { season: seasonName }) : t("season.rankTitle")}
       </p>
       <div className="spacer-8" />
       {stats.map((s, index) => {

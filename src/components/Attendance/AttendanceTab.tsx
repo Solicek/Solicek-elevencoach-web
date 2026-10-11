@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AttendanceStatsSection } from "./AttendanceStatsSection";
 import { AttendanceDetailScreen } from "./AttendanceDetailScreen";
 import type { AttendanceRecord, Player } from "../../types";
 import { storedLabel, t, tf } from "../../lib/i18n";
+import { defaultSeasonStartYear, inSeason, listSeasonStartYears } from "../../lib/season";
+import { SeasonSelector } from "../Shell/SeasonSelector";
 
 interface Props {
   players: Player[];
@@ -14,6 +16,12 @@ interface Props {
 
 export function AttendanceTab({ players, attendance, onUpdateRecord, onDeleteRecord, readOnly = false }: Props) {
   const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+
+  // Docházka se stejně jako historie dělí po sezónách – odvozeno z data termínu.
+  const seasons = useMemo(() => listSeasonStartYears(attendance.map((a) => a.date)), [attendance]);
+  const [selectedSeason, setSelectedSeason] = useState<number | null | undefined>(undefined);
+  const activeSeason = selectedSeason === undefined ? defaultSeasonStartYear(seasons) : selectedSeason;
+  const seasonAttendance = useMemo(() => inSeason(attendance, activeSeason), [attendance, activeSeason]);
 
   const selectedRecord = attendance.find((a) => a.id === selectedRecordId);
 
@@ -43,9 +51,11 @@ export function AttendanceTab({ players, attendance, onUpdateRecord, onDeleteRec
         </div>
       ) : (
         <>
-          <AttendanceStatsSection players={players} attendance={attendance} />
+          <div className="spacer-8" />
+          <SeasonSelector seasons={seasons} selected={activeSeason} onSelect={setSelectedSeason} />
+          <AttendanceStatsSection players={players} attendance={seasonAttendance} />
           <hr style={{ border: "none", borderTop: "1px solid var(--divider)" }} />
-          {attendance.map((record) => {
+          {seasonAttendance.map((record) => {
             const present = record.playerNames.length - record.absentNames.length;
             return (
               <div key={record.id} className="list-row" style={{ cursor: "pointer" }} onClick={() => setSelectedRecordId(record.id)}>

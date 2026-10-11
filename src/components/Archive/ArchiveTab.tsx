@@ -5,6 +5,8 @@ import { ArchiveDetailScreen } from "./ArchiveDetailScreen";
 import { MatchType } from "../../types";
 import { matchTitle } from "../../lib/matchTitle";
 import { compareDateStrings, todayDateString } from "../../lib/dateUtils";
+import { defaultSeasonStartYear, inSeason, listSeasonStartYears, seasonLabel } from "../../lib/season";
+import { SeasonSelector } from "../Shell/SeasonSelector";
 import { formationLabel, storedLabel, t } from "../../lib/i18n";
 
 interface Props {
@@ -43,6 +45,14 @@ export function ArchiveTab({
       .sort((a, b) => compareDateStrings(b.date, a.date));
   }, [archive]);
 
+  // Sezóny se odvozují z dat zápasů (lib/season.ts) – archiv se nikam nepřesouvá, jen se
+  // filtruje. `null` = "Vše", tedy původní chování napříč sezónami.
+  const seasons = useMemo(() => listSeasonStartYears(playedArchive.map((e) => e.date)), [playedArchive]);
+  const [selectedSeason, setSelectedSeason] = useState<number | null | undefined>(undefined);
+  // `undefined` = trenér zatím nevybíral, bere se výchozí sezóna (dopočítá se, až dorazí data).
+  const activeSeason = selectedSeason === undefined ? defaultSeasonStartYear(seasons) : selectedSeason;
+  const seasonArchive = useMemo(() => inSeason(playedArchive, activeSeason), [playedArchive, activeSeason]);
+
   const selectedEntry = playedArchive.find((e) => e.id === selectedEntryId);
 
   if (selectedEntry) {
@@ -76,10 +86,18 @@ export function ArchiveTab({
         </div>
       ) : (
         <>
-          <SeasonSummarySection archive={playedArchive} />
-          <PlayerStatsSummarySection archive={playedArchive} />
+          <div className="spacer-8" />
+          <SeasonSelector seasons={seasons} selected={activeSeason} onSelect={setSelectedSeason} />
+          <SeasonSummarySection
+            archive={seasonArchive}
+            seasonName={activeSeason === null ? null : seasonLabel(activeSeason)}
+          />
+          <PlayerStatsSummarySection
+            archive={seasonArchive}
+            seasonName={activeSeason === null ? null : seasonLabel(activeSeason)}
+          />
           <hr style={{ border: "none", borderTop: "1px solid var(--divider)" }} />
-          {playedArchive.map((entry) => (
+          {seasonArchive.map((entry) => (
             <div key={entry.id} className="list-row" style={{ cursor: "pointer" }} onClick={() => setSelectedEntryId(entry.id)}>
               <div style={{ flex: 1 }}>
                 <p className="text-bold">
