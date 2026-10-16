@@ -157,6 +157,13 @@ export const STRINGS = {
   "cal.addTrainingTitle": { cs: "Přidat trénink", en: "Add training" },
 
   // Historie
+  "archive.search": { cs: "Hledat soupeře…", en: "Search opponent…" },
+  "archive.searchEmpty": {
+    cs: "Žádný zápas s tímto soupeřem.",
+    en: "No match against this opponent.",
+  },
+  "archive.h2hTitle": { cs: "Vzájemná bilance · {count} {word}", en: "Head-to-head · {count} {word}" },
+  "archive.noSeason": { cs: "Bez data", en: "No date" },
   "archive.empty": {
     cs: "Zatím žádné odehrané zápasy.\nNadcházející zápasy najdeš v Kalendáři.",
     en: "No played matches yet.\nUpcoming matches are in the Calendar.",

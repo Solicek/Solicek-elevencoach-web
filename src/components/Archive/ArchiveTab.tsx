@@ -5,9 +5,11 @@ import { ArchiveDetailScreen } from "./ArchiveDetailScreen";
 import { MatchType } from "../../types";
 import { matchTitle } from "../../lib/matchTitle";
 import { compareDateStrings, todayDateString } from "../../lib/dateUtils";
-import { defaultSeasonStartYear, inSeason, listSeasonStartYears, seasonLabel } from "../../lib/season";
+import { defaultSeasonStartYear, inSeason, listSeasonStartYears, seasonLabel, seasonStartYear } from "../../lib/season";
 import { SeasonSelector } from "../Shell/SeasonSelector";
-import { formationLabel, storedLabel, t } from "../../lib/i18n";
+import { matchesSearch } from "../../lib/textSearch";
+import { formationLabel, matchCountWord, storedLabel, t, tf } from "../../lib/i18n";
+import { computeSeasonRecord } from "../../lib/seasonStats";
 
 interface Props {
   teamCode: string;
@@ -53,6 +55,32 @@ export function ArchiveTab({
   const activeSeason = selectedSeason === undefined ? defaultSeasonStartYear(seasons) : selectedSeason;
   const seasonArchive = useMemo(() => inSeason(playedArchive, activeSeason), [playedArchive, activeSeason]);
 
+  // Hledání soupeře jde schválně NAPŘÍČ sezónami – "kdy jsme hráli se Spartou" je skoro vždy
+  // otázka přes roky. Výsledky se ale pořád ukazují rozdělené po sezónách.
+  const [search, setSearch] = useState("");
+  const isSearching = search.trim() !== "";
+  const searchResults = useMemo(
+    () => (isSearching ? playedArchive.filter((e) => matchesSearch(e.opponent, search)) : []),
+    [playedArchive, search, isSearching]
+  );
+
+  /** Zápasy rozdělené do sezón, od nejnovější; zápisy s neplatným datem padají na konec. */
+  const groupedBySeason = useMemo(() => {
+    const groups = new Map<number | null, ArchivedLineup[]>();
+    for (const entry of searchResults) {
+      const year = seasonStartYear(entry.date);
+      if (!groups.has(year)) groups.set(year, []);
+      groups.get(year)!.push(entry);
+    }
+    return Array.from(groups.entries()).sort((a, b) => {
+      if (a[0] === null) return 1;
+      if (b[0] === null) return -1;
+      return b[0] - a[0];
+    });
+  }, [searchResults]);
+
+  const headToHead = useMemo(() => computeSeasonRecord(searchResults), [searchResults]);
+
   const selectedEntry = playedArchive.find((e) => e.id === selectedEntryId);
 
   if (selectedEntry) {
@@ -86,36 +114,111 @@ export function ArchiveTab({
         </div>
       ) : (
         <>
-          <div className="spacer-8" />
-          <SeasonSelector seasons={seasons} selected={activeSeason} onSelect={setSelectedSeason} />
-          <SeasonSummarySection
-            archive={seasonArchive}
-            seasonName={activeSeason === null ? null : seasonLabel(activeSeason)}
-          />
-          <PlayerStatsSummarySection
-            archive={seasonArchive}
-            seasonName={activeSeason === null ? null : seasonLabel(activeSeason)}
-          />
-          <hr style={{ border: "none", borderTop: "1px solid var(--divider)" }} />
-          {seasonArchive.map((entry) => (
-            <div key={entry.id} className="list-row" style={{ cursor: "pointer" }} onClick={() => setSelectedEntryId(entry.id)}>
-              <div style={{ flex: 1 }}>
-                <p className="text-bold">
-                  {entry.result ? `${matchTitle(entry, teamName)} ${entry.result}` : matchTitle(entry, teamName)}
-                </p>
-                <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-                  {entry.date} · {formationLabel(entry.formationName)}
-                  {entry.matchType === MatchType.FRIENDLY ? ` · ${storedLabel(MatchType.FRIENDLY)}` : ""}
-                </p>
-              </div>
-              {entry.photoPaths.length > 0 && (
-                <span className="text-gray" style={{ fontSize: "0.8rem" }}>
-                  📷 {entry.photoPaths.length}
-                </span>
-              )}
-            </div>
-          ))}
+          <div style={{ padding: "12px 16px 4px" }}>
+            <input
+              className="input"
+              placeholder={t("archive.search")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+
+          {isSearching ? (
+            searchResults.length === 0 ? (
+              <p className="text-gray" style={{ fontSize: "0.85rem", padding: "16px" }}>
+                {t("archive.searchEmpty")}
+              </p>
+            ) : (
+              <>
+                <div style={{ padding: "8px 16px 0" }}>
+                  <p className="text-bold" style={{ fontSize: "0.9rem" }}>
+                    {tf("archive.h2hTitle", {
+                      count: String(headToHead.played),
+                      word: matchCountWord(headToHead.played),
+                    })}
+                  </p>
+                  <div className="spacer-8" />
+                  <p className="text-gray" style={{ fontSize: "0.85rem" }}>
+                    {headToHead.wins} {t("season.win")} · {headToHead.draws} {t("season.draw")} ·{" "}
+                    {headToHead.losses} {t("season.loss")} · {t("season.score")} {headToHead.goalsFor}:
+                    {headToHead.goalsAgainst}
+                  </p>
+                </div>
+                {/* Výsledky hledání jsou rozdělené po sezónách, ať je hned vidět, ze které sezóny
+                    který zápas je – jinak by se roky slily do jednoho seznamu. */}
+                {groupedBySeason.map(([startYear, entries]) => (
+                  <div key={startYear ?? "bez-data"}>
+                    <p
+                      className="text-bold"
+                      style={{ fontSize: "0.8rem", color: "var(--primary)", padding: "16px 16px 4px" }}
+                    >
+                      {startYear === null ? t("archive.noSeason") : seasonLabel(startYear)}
+                    </p>
+                    {entries.map((entry) => (
+                      <MatchRow
+                        key={entry.id}
+                        entry={entry}
+                        teamName={teamName}
+                        onClick={() => setSelectedEntryId(entry.id)}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </>
+            )
+          ) : (
+            <>
+              <SeasonSelector seasons={seasons} selected={activeSeason} onSelect={setSelectedSeason} />
+              <SeasonSummarySection
+                archive={seasonArchive}
+                seasonName={activeSeason === null ? null : seasonLabel(activeSeason)}
+              />
+              <PlayerStatsSummarySection
+                archive={seasonArchive}
+                seasonName={activeSeason === null ? null : seasonLabel(activeSeason)}
+              />
+              <hr style={{ border: "none", borderTop: "1px solid var(--divider)" }} />
+              {seasonArchive.map((entry) => (
+                <MatchRow
+                  key={entry.id}
+                  entry={entry}
+                  teamName={teamName}
+                  onClick={() => setSelectedEntryId(entry.id)}
+                />
+              ))}
+            </>
+          )}
         </>
+      )}
+    </div>
+  );
+}
+
+/** Jeden řádek zápasu v historii – stejný v seznamu sezóny i ve výsledcích hledání. */
+function MatchRow({
+  entry,
+  teamName,
+  onClick,
+}: {
+  entry: ArchivedLineup;
+  teamName: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="list-row" style={{ cursor: "pointer" }} onClick={onClick}>
+      <div style={{ flex: 1 }}>
+        <p className="text-bold">
+          {entry.result ? `${matchTitle(entry, teamName)} ${entry.result}` : matchTitle(entry, teamName)}
+        </p>
+        <p className="text-gray" style={{ fontSize: "0.8rem" }}>
+          {entry.date} · {formationLabel(entry.formationName)}
+          {entry.matchType === MatchType.FRIENDLY ? ` · ${storedLabel(MatchType.FRIENDLY)}` : ""}
+        </p>
+      </div>
+      {entry.photoPaths.length > 0 && (
+        <span className="text-gray" style={{ fontSize: "0.8rem" }}>
+          📷 {entry.photoPaths.length}
+        </span>
       )}
     </div>
   );
