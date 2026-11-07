@@ -159,6 +159,11 @@ export async function getOrCreateViewerCode(teamCode: string): Promise<string> {
 
 // --- Aktuální sestava (rozestavení + jména + náhradníci) ---
 
+/**
+ * @param onTeamMissing zavolá se, když dokument týmu na serveru NEEXISTUJE (tým byl smazaný,
+ * nebo appka drží starý kód). Bez toho by appka zůstala viset na prázdné sestavě a každý
+ * zápis by skončil chybou "No document to update".
+ */
 export function listenLineup(
   teamCode: string,
   onChange: (
@@ -167,10 +172,16 @@ export function listenLineup(
     names: Record<string, string>,
     substitutes: Substitute[],
     fineRates: FineRates
-  ) => void
+  ) => void,
+  onTeamMissing?: () => void
 ): Unsubscribe {
   return onSnapshot(teamDoc(teamCode), (snap) => {
-    if (!snap.exists()) return;
+    if (!snap.exists()) {
+      // Jen podle odpovědi ZE SERVERU – offline má Firestore prázdnou cache a tým by se tím
+      // pádem jevil jako smazaný i při obyčejném výpadku sítě.
+      if (!snap.metadata.fromCache) onTeamMissing?.();
+      return;
+    }
     const data = snap.data();
     const teamName = (data.teamName as string) ?? "";
     const lineup = (data.lineup as Record<string, unknown>) ?? {};

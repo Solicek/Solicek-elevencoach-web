@@ -41,7 +41,12 @@ export interface TeamData {
  * (optimisticky) přes setNames/setSubstitutes/setFormationName; efekt níže je pak sám
  * zapíše do Firestore (stejný vzor jako Android LaunchedEffect + saveLineup).
  */
-export function useTeamData(teamCode: string): TeamData {
+/**
+ * @param onTeamMissing zavolá se, když tým v databázi neexistuje (smazaný tým / starý uložený
+ * kód) – appka se pak má vrátit na úvodní obrazovku, protože v takovém týmu by každý zápis
+ * skončil chybou.
+ */
+export function useTeamData(teamCode: string, onTeamMissing?: () => void): TeamData {
   const [teamName, setTeamName] = useState("");
   const [formationName, setFormationName] = useState(formationNames[0]);
   const [names, setNames] = useState<Record<string, string>>({});
@@ -59,6 +64,9 @@ export function useTeamData(teamCode: string): TeamData {
 
   // lineupLoaded se čte i zapisuje uvnitř saveLineup efektu bez re-registrace listeneru
   const lineupLoadedRef = useRef(false);
+  // Callback přes ref, ať nová funkce z rodiče nepřeregistrovává všechny listenery.
+  const onTeamMissingRef = useRef(onTeamMissing);
+  onTeamMissingRef.current = onTeamMissing;
 
   useEffect(() => {
     setLineupLoaded(false);
@@ -101,7 +109,7 @@ export function useTeamData(teamCode: string): TeamData {
 
       lineupLoadedRef.current = true;
       setLineupLoaded(true);
-    });
+    }, () => onTeamMissingRef.current?.());
     const unsubPlayers = repo.listenPlayers(teamCode, setPlayers);
     const unsubArchive = repo.listenArchive(teamCode, setArchive);
     const unsubAttendance = repo.listenAttendance(teamCode, setAttendance);

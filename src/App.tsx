@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ensureSignedIn } from "./firebase";
-import { loadReadOnly, loadTeamCode, saveTeamCode } from "./lib/localTeamCode";
+import { clearTeamCode, loadReadOnly, loadTeamCode, saveTeamCode } from "./lib/localTeamCode";
 import { TeamGateScreen } from "./components/TeamGate/TeamGateScreen";
 import { AppShell } from "./components/Shell/AppShell";
 import { PlayersTab } from "./components/Roster/PlayersTab";
@@ -86,7 +86,12 @@ function App() {
 }
 
 function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isReadOnly: boolean; onLeaveTeam: () => void }) {
-  const data = useTeamData(teamCode);
+  // Když tým v databázi neexistuje (smazaný tým / starý kód v prohlížeči), nemá smysl v něm
+  // zůstat – appka kód zapomene a vrátí se na úvodní obrazovku.
+  const data = useTeamData(teamCode, () => {
+    clearTeamCode();
+    onLeaveTeam();
+  });
 
   // Taktika kreslí přes sestavu nejbližšího nadcházejícího (ještě neuzavřeného) zápasu z
   // kalendáře, ať trenér může připravovat tah na konkrétní zápas dopředu. Jakmile se ten
