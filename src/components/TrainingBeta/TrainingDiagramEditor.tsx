@@ -963,7 +963,12 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
           (() => {
             const selected = arrows.find((a) => a.id === selectedArrowId);
             if (!selected) return null;
-            const mid = arrowMidpoint(selected.points, selected.style);
+            // Ovládání se drží BUBLINKY S ČÍSLEM, ne středu šipky – když číslo odtáhneš
+            // stranou, jdou tlačítka +/− a mazání s ním. Šipka bez čísla má bublinku
+            // (a tedy i tlačítka) uprostřed.
+            const arrowMid = arrowMidpoint(selected.points, selected.style);
+            const numberOffset = selected.numberOffset ?? { x: 0, y: 0 };
+            const mid = { x: arrowMid.x + numberOffset.x, y: arrowMid.y + numberOffset.y };
             return (
               <>
                 {selected.points.map((p, i) => (
@@ -989,8 +994,8 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                     }}
                   />
                 ))}
-                {/* Ovládací shluk vybrané šipky: mazání nad středem, +/- na číslo pořadí pod
-                    středem (vlevo/vpravo) – bublinka s číslem zůstává přesně uprostřed. */}
+                {/* Ovládací shluk vybrané šipky: mazání nad bublinkou, +/− na číslo pořadí
+                    pod ní (vlevo/vpravo) – bublinka s číslem zůstává přesně uprostřed. */}
                 <button
                   onPointerDown={(e) => e.stopPropagation()}
                   onClick={(e) => {
