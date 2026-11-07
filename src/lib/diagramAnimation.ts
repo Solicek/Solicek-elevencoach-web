@@ -31,6 +31,10 @@ const STEP_GAP_MS = 250;
 const SAME_SPOT = 0.045;
 /** Pojistka proti nekonečnému kolečku u nákresu, který se nikdy nevrátí do výchozího stavu. */
 const MAX_ROUNDS = 8;
+/** Míč, který v nákresu nakreslený není – přihrávku je stejně potřeba ukázat s míčem. */
+export const GHOST_BALL_ID = "__ghost-ball__";
+/** Jak daleko od začátku šipky se ještě hledá míč, který se po ní poveze. */
+const BALL_PICKUP_RADIUS = 0.18;
 
 /** Styly, u kterých se po šipce veze míč. */
 const BALL_STYLES = new Set<string>([
@@ -65,6 +69,11 @@ export interface AnimationMove {
   playerId: string | null;
   /** Veze se po dráze i míč (vedení míče, přihrávka, střelba)? */
   movesBall: boolean;
+  /**
+   * Který míč se veze – id prvku, nebo GHOST_BALL_ID, když nákres žádný míč nemá
+   * (přihrávka ho stejně má ukázat). Nákres může mít míčů víc a každý si jede po svém.
+   */
+  ballId: string | null;
 }
 
 export interface AnimationStep {
@@ -90,8 +99,8 @@ export interface AnimationTrace {
 export interface AnimationFrame {
   /** Pozice prvků v daném čase – klíč je id prvku; co tam není, se nehýbalo. */
   elementPositions: Map<string, Point>;
-  /** Pozice míče, nebo null, když nákres s míčem vůbec nepracuje. */
-  ball: Point | null;
+  /** Pozice všech míčů (klíč = id prvku, případně GHOST_BALL_ID) v daném čase. */
+  balls: Map<string, Point>;
   /** Šipky, po kterých se právě někdo pohybuje – pro zvýraznění probíhající akce. */
   activeArrowIds: Set<string>;
   /** Prvky, které se právě hýbou – zvýrazní se kroužkem, ať je vidět, kdo jde. */
@@ -207,6 +216,32 @@ function findActorAt(arrow: TrainingDiagramArrow, movables: MovableState[], take
   return bestId;
 }
 
+/**
+ * Který míč se po šipce poveze: ten, co je teď nejblíž jejímu začátku. Nákres bez míče
+ * dostane "duchy" míč, aby přihrávka vůbec byla vidět. `taken` hlídá, aby dvě souběžné
+ * šipky nevezly tentýž míč.
+ */
+function pickBall(arrow: TrainingDiagramArrow, balls: MovableState[], taken: Set<string>): string | null {
+  const start = arrow.points[0];
+  if (!start) return null;
+  if (balls.length === 0) return GHOST_BALL_ID;
+
+  let bestId: string | null = null;
+  let bestDistance = BALL_PICKUP_RADIUS;
+  for (const ball of balls) {
+    if (taken.has(ball.id)) continue;
+    const d = distance(start, ball.current);
+    if (d <= bestDistance) {
+      bestDistance = d;
+      bestId = ball.id;
+    }
+  }
+  // Když u začátku šipky žádný míč není, u jediného míče v nákresu se bere ten (trenér
+  // nejspíš nakreslil jen jeden a počítá s ním); u víc míčů se radši nehýbe žádným.
+  if (!bestId && balls.length === 1 && !taken.has(balls[0].id)) return balls[0].id;
+  return bestId;
+}
+
 /** Stojí každý hráč zase na svém výchozím místě? Pak je kolečko dojeté. */
 function allBackHome(movables: MovableState[]): boolean {
   return movables.every((m) => distance(m.current, m.start) <= SAME_SPOT);
@@ -256,6 +291,11 @@ export function buildAnimation(diagram: TrainingDiagram): Animation {
   const movables: MovableState[] = diagram.elements
     .filter((e) => MOVABLE_TYPES.has(e.type))
     .map((e) => ({ id: e.id, start: { x: e.x, y: e.y }, current: { x: e.x, y: e.y } }));
+  // Míčů může být v nákresu víc (čtverec se dvěma míči) – každý se sleduje zvlášť, jinak by
+  // se hýbal pořád jen ten první a druhý by stál (nebo při animaci úplně zmizel).
+  const balls: MovableState[] = diagram.elements
+    .filter((e) => e.type === DiagramElementType.BALL)
+    .map((e) => ({ id: e.id, start: { x: e.x, y: e.y }, current: { x: e.x, y: e.y } }));
 
   const steps: AnimationStep[] = [];
   let cursor = 0;
@@ -269,27 +309,37 @@ export function buildAnimation(diagram: TrainingDiagram): Animation {
     for (const order of orders) {
       const arrows = byNumber.get(order)!;
       const taken = new Set<string>();
+      const takenBalls = new Set<string>();
       const moves: AnimationMove[] = arrows.map((arrow) => {
         const playerId = PLAYER_MOVES_STYLES.has(arrow.style) ? findActorAt(arrow, movables, taken) : null;
         if (playerId) taken.add(playerId);
+        const movesBall = BALL_STYLES.has(arrow.style);
+        const ballId = movesBall ? pickBall(arrow, balls, takenBalls) : null;
+        if (ballId) takenBalls.add(ballId);
         return {
           arrowId: arrow.id,
           path: arrow.points.map((p) => ({ x: p.x, y: p.y })),
           style: arrow.style,
           playerId,
-          movesBall: BALL_STYLES.has(arrow.style),
+          movesBall,
+          ballId,
         };
       });
 
       // Po kroku se hráči posunou na konec své dráhy – další krok (i další kolo) už počítá
       // s novým rozestavením.
       for (const move of moves) {
-        if (!move.playerId) continue;
-        const movable = movables.find((m) => m.id === move.playerId);
         const end = move.path[move.path.length - 1];
-        if (movable && distance(movable.current, end) > 1e-6) {
-          movable.current = { x: end.x, y: end.y };
-          movedSomething = true;
+        if (move.playerId) {
+          const movable = movables.find((m) => m.id === move.playerId);
+          if (movable && distance(movable.current, end) > 1e-6) {
+            movable.current = { x: end.x, y: end.y };
+            movedSomething = true;
+          }
+        }
+        if (move.ballId) {
+          const ball = balls.find((b) => b.id === move.ballId);
+          if (ball) ball.current = { x: end.x, y: end.y };
         }
       }
 
@@ -321,8 +371,12 @@ export function sampleAnimation(animation: Animation, diagram: TrainingDiagram, 
   const movingElementIds = new Set<string>();
   const traces: AnimationTrace[] = [];
 
-  const ballElement = diagram.elements.find((e) => e.type === DiagramElementType.BALL);
-  let ball: Point | null = ballElement ? { x: ballElement.x, y: ballElement.y } : null;
+  // Každý nakreslený míč začíná tam, kde je v nákresu; "duchy" míč se objeví až tím,
+  // že ho nějaká přihrávka rozpohybuje.
+  const balls = new Map<string, Point>();
+  for (const element of diagram.elements) {
+    if (element.type === DiagramElementType.BALL) balls.set(element.id, { x: element.x, y: element.y });
+  }
 
   for (const step of animation.steps) {
     const elapsed = timeMs - step.startMs;
@@ -338,7 +392,7 @@ export function sampleAnimation(animation: Animation, diagram: TrainingDiagram, 
       }
       if (move.playerId) elementPositions.set(move.playerId, pointOnPath(move.path, t));
       // Míč letí přesně po nakreslené čáře (u přihrávky vzduchem po oblouku).
-      if (move.movesBall) ball = pointOnPath(move.path, t, move.style);
+      if (move.ballId) balls.set(move.ballId, pointOnPath(move.path, t, move.style));
       traces.push({
         arrowId: move.arrowId,
         points: pathUpTo(move.path, t, move.style),
@@ -348,5 +402,5 @@ export function sampleAnimation(animation: Animation, diagram: TrainingDiagram, 
     }
   }
 
-  return { elementPositions, ball, activeArrowIds, movingElementIds, traces };
+  return { elementPositions, balls, activeArrowIds, movingElementIds, traces };
 }

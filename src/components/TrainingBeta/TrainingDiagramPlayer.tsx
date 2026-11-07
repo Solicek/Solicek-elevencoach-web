@@ -165,19 +165,21 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
           );
         })}
 
-        {frame.ball && (
+        {/* Míčů může být v nákresu víc – každý se kreslí tam, kam ho animace dovedla. */}
+        {Array.from(frame.balls.entries()).map(([ballId, position]) => (
           <div
+            key={ballId}
             style={{
               position: "absolute",
-              left: `${frame.ball.x * 100}%`,
-              top: `${frame.ball.y * 100}%`,
+              left: `${position.x * 100}%`,
+              top: `${position.y * 100}%`,
               transform: "translate(-50%, -50%)",
               filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.65))",
             }}
           >
             <DiagramElementIcon type={DiagramElementType.BALL} size={BALL_SIZE} />
           </div>
-        )}
+        ))}
       </div>
 
       <div className="spacer-8" />
