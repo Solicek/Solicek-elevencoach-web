@@ -525,6 +525,15 @@ export const STRINGS = {
   "beta.rotate": { cs: "Otočit o 45°", en: "Rotate by 45°" },
   "beta.scaleDown": { cs: "Zmenšit", en: "Make smaller" },
   "beta.scaleUp": { cs: "Zvětšit", en: "Make bigger" },
+  "beta.play": { cs: "▶ Přehrát", en: "▶ Play" },
+  "beta.pause": { cs: "⏸ Pauza", en: "⏸ Pause" },
+  "beta.replay": { cs: "↻ Znovu", en: "↻ Replay" },
+  "beta.animation": { cs: "Animace", en: "Animation" },
+  "beta.diagramStatic": { cs: "Nákres", en: "Diagram" },
+  "beta.nothingToPlay": {
+    cs: "Nákres nemá žádné šipky, není co přehrát. Šipky pořadím (+/−) určují, co jde po sobě.",
+    en: "The diagram has no arrows, so there is nothing to play. Arrow numbers (+/−) set the order.",
+  },
   "beta.back": { cs: "Zpět", en: "Back" },
   "beta.deleteTitle": { cs: "Smazat nákres?", en: "Delete the diagram?" },
   "beta.deleteBody": {
