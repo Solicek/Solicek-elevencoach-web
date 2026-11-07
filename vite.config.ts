@@ -8,6 +8,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registraci si dělá appka sama v main.tsx, aby mohla novou verzi hlídat i za běhu
+      // (vložený skript kontroluje jen při načtení stránky – viz komentář tam).
+      injectRegister: null,
       includeAssets: ['icons/apple-touch-icon-180.png'],
       manifest: {
         name: 'ElevenCoach',
