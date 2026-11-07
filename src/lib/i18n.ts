@@ -529,6 +529,7 @@ export const STRINGS = {
   "beta.pause": { cs: "⏸ Pauza", en: "⏸ Pause" },
   "beta.replay": { cs: "↻ Znovu", en: "↻ Replay" },
   "beta.animation": { cs: "Animace", en: "Animation" },
+  "beta.showArrows": { cs: "Ukázat i šipky", en: "Show arrows too" },
   "beta.diagramStatic": { cs: "Nákres", en: "Diagram" },
   "beta.nothingToPlay": {
     cs: "Nákres nemá žádné šipky, není co přehrát. Šipky pořadím (+/−) určují, co jde po sobě.",

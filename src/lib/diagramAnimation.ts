@@ -74,6 +74,15 @@ export interface Animation {
   totalMs: number;
 }
 
+/** Už projetá část dráhy – kreslí se jako stopa za hráčem/míčem. */
+export interface AnimationTrace {
+  arrowId: string;
+  points: Point[];
+  /** Probíhá tahle dráha právě teď? Aktivní stopa je výraznější než ty dojeté. */
+  active: boolean;
+  movesBall: boolean;
+}
+
 export interface AnimationFrame {
   /** Pozice prvků v daném čase – klíč je id prvku; co tam není, se nehýbalo. */
   elementPositions: Map<string, Point>;
@@ -81,6 +90,10 @@ export interface AnimationFrame {
   ball: Point | null;
   /** Šipky, po kterých se právě někdo pohybuje – pro zvýraznění probíhající akce. */
   activeArrowIds: Set<string>;
+  /** Prvky, které se právě hýbou – zvýrazní se kroužkem, ať je vidět, kdo jde. */
+  movingElementIds: Set<string>;
+  /** Stopy za pohybem, v pořadí od nejstarší. */
+  traces: AnimationTrace[];
 }
 
 function distance(a: Point, b: Point): number {
@@ -128,6 +141,38 @@ export function pointOnPath(points: Point[], t: number, style?: string): Point {
     remaining -= segment;
   }
   return points[points.length - 1];
+}
+
+/**
+ * Část dráhy od začátku po poměrnou část t – kreslí se jako stopa za pohybem. Oblouk se
+ * navzorkuje na víc bodů, aby stopa kopírovala křivku, ne tětivu.
+ */
+export function pathUpTo(points: Point[], t: number, style?: string): Point[] {
+  const clamped = Math.min(1, Math.max(0, t));
+  if (points.length < 2 || clamped <= 0) return [];
+
+  if (style && isCurvedArrowStyle(style) && points.length === 3) {
+    const samples = 24;
+    const result: Point[] = [];
+    for (let i = 0; i <= samples; i++) result.push(pointOnPath(points, (clamped * i) / samples, style));
+    return result;
+  }
+
+  const total = pathLength(points);
+  if (total === 0) return [];
+  const target = total * clamped;
+  const result: Point[] = [points[0]];
+  let travelled = 0;
+  for (let i = 1; i < points.length; i++) {
+    const segment = distance(points[i - 1], points[i]);
+    if (travelled + segment >= target) {
+      result.push(pointOnPath(points, clamped));
+      break;
+    }
+    travelled += segment;
+    result.push(points[i]);
+  }
+  return result;
 }
 
 /** Hráč nejblíž začátku šipky – ten se po ní vydá. */
@@ -178,7 +223,10 @@ export function buildAnimation(diagram: TrainingDiagram): Animation {
     cursor += durationMs + STEP_GAP_MS;
   }
 
-  return { steps, totalMs: Math.max(0, cursor - STEP_GAP_MS) };
+  // Konec se bere z posledního kroku, ne jako "cursor - mezera" – odečítání float čísel
+  // umí minout o setinu milisekundy a poslední krok by pak navždy vypadal jako probíhající.
+  const last = steps[steps.length - 1];
+  return { steps, totalMs: last ? last.startMs + last.durationMs : 0 };
 }
 
 /**
@@ -188,6 +236,8 @@ export function buildAnimation(diagram: TrainingDiagram): Animation {
 export function sampleAnimation(animation: Animation, diagram: TrainingDiagram, timeMs: number): AnimationFrame {
   const elementPositions = new Map<string, Point>();
   const activeArrowIds = new Set<string>();
+  const movingElementIds = new Set<string>();
+  const traces: AnimationTrace[] = [];
 
   const ballElement = diagram.elements.find((e) => e.type === DiagramElementType.BALL);
   let ball: Point | null = ballElement ? { x: ballElement.x, y: ballElement.y } : null;
@@ -196,14 +246,25 @@ export function sampleAnimation(animation: Animation, diagram: TrainingDiagram, 
     const elapsed = timeMs - step.startMs;
     if (elapsed <= 0) break;
     const t = Math.min(1, elapsed / step.durationMs);
+    // Dojetý krok se nesmí tvářit jako probíhající ani při zaokrouhlovací chybě.
+    const isRunning = t < 0.999;
 
     for (const move of step.moves) {
-      if (t < 1) activeArrowIds.add(move.arrowId);
+      if (isRunning) {
+        activeArrowIds.add(move.arrowId);
+        if (move.playerId) movingElementIds.add(move.playerId);
+      }
       if (move.playerId) elementPositions.set(move.playerId, pointOnPath(move.path, t));
       // Míč letí přesně po nakreslené čáře (u přihrávky vzduchem po oblouku).
       if (move.movesBall) ball = pointOnPath(move.path, t, move.style);
+      traces.push({
+        arrowId: move.arrowId,
+        points: pathUpTo(move.path, t, move.style),
+        active: isRunning,
+        movesBall: move.movesBall,
+      });
     }
   }
 
-  return { elementPositions, ball, activeArrowIds };
+  return { elementPositions, ball, activeArrowIds, movingElementIds, traces };
 }
