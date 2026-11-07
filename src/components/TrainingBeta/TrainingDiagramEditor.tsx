@@ -29,6 +29,8 @@ const DRAG_THRESHOLD = 6;
 const ARROW_MIN_DISTANCE = 15;
 const WAYPOINT_SNAP_RADIUS = 26;
 const ARROW_TAP_HIT_RADIUS = 16;
+/** Dosah, ve kterém ťuknutí ještě chytne bublinku s číslem (prst je širší než ona). */
+const NUMBER_GRAB_RADIUS = 26;
 const ALIGN_SNAP_PX = 8;
 const SQUARE_TOLERANCE_RATIO = 0.12;
 
@@ -318,6 +320,16 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
   function handleCanvasPointerDown(e: React.PointerEvent<HTMLCanvasElement>) {
     if (isPinchingRef.current) return;
     const pt = relativePoint(e);
+    // Nejdřív čísla: prst je širší než bublinka a ťuknutí vedle ní by jinak začalo
+    // kreslit novou šipku místo toho, aby číslo chytlo.
+    if (!activeTool) {
+      const nearNumber = findNumberNear(pt);
+      if (nearNumber) {
+        startNumberDrag(nearNumber, e.clientX, e.clientY);
+        e.currentTarget.setPointerCapture(e.pointerId);
+        return;
+      }
+    }
     if (activeTool) {
       const snap = computeAlignmentSnap(pt, null);
       placingRef.current = { type: activeTool, point: snap.point };
@@ -335,6 +347,10 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
   }
 
   function handleCanvasPointerMove(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (numberDragRef.current) {
+      moveDraggedNumber(e.clientX, e.clientY);
+      return;
+    }
     if (placingRef.current) {
       const snap = computeAlignmentSnap(relativePoint(e), null);
       placingRef.current = { type: placingRef.current.type, point: snap.point };
@@ -376,6 +392,10 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
   }
 
   function handleCanvasPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
+    if (numberDragRef.current) {
+      numberDragRef.current = null;
+      return;
+    }
     if (placingRef.current) {
       const { type, point } = placingRef.current;
       placingRef.current = null;
@@ -595,17 +615,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
   function handleNumberPointerDown(e: React.PointerEvent<HTMLDivElement>, arrow: TrainingDiagramArrow) {
     if (isPinchingRef.current) return;
     e.stopPropagation();
-    setSelectedElementId(null);
-    // Klepnutí na číslo rovnou vybere jeho šipku – u překrytých čísel je to jediná
-    // spolehlivá cesta, jak se k té správné šipce dostat.
-    setSelectedArrowId(arrow.id);
-    numberDragRef.current = {
-      arrowId: arrow.id,
-      startClientX: e.clientX,
-      startClientY: e.clientY,
-      startOffset: arrow.numberOffset ?? { x: 0, y: 0 },
-      moved: false,
-    };
+    startNumberDrag(arrow, e.clientX, e.clientY);
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
@@ -614,11 +624,51 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
     }
   }
 
-  function handleNumberPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+  /** Kde na ploše (v nezoomovaných bodech) leží bublinka s číslem dané šipky. */
+  function numberPosition(arrow: TrainingDiagramArrow): Point {
+    const mid = arrowMidpoint(arrow.points, arrow.style);
+    const offset = arrow.numberOffset ?? { x: 0, y: 0 };
+    return { x: (mid.x + offset.x) * (size.width || 1), y: (mid.y + offset.y) * (size.height || 1) };
+  }
+
+  /**
+   * Nejbližší číslo v dosahu prstu. Bublinka je malá a na telefonu se dá snadno minout –
+   * ťuknutí vedle by jinak spadlo na plochu a začalo kreslit novou šipku.
+   */
+  function findNumberNear(point: Point): TrainingDiagramArrow | null {
+    let best: TrainingDiagramArrow | null = null;
+    let bestDistance = NUMBER_GRAB_RADIUS;
+    for (const arrow of arrows) {
+      if (arrow.number == null) continue;
+      const position = numberPosition(arrow);
+      const d = Math.hypot(point.x - position.x, point.y - position.y);
+      if (d <= bestDistance) {
+        bestDistance = d;
+        best = arrow;
+      }
+    }
+    return best;
+  }
+
+  function startNumberDrag(arrow: TrainingDiagramArrow, clientX: number, clientY: number) {
+    setSelectedElementId(null);
+    // Chycení čísla rovnou vybere jeho šipku – u překrytých čísel je to jediná spolehlivá
+    // cesta, jak se k té správné dostat.
+    setSelectedArrowId(arrow.id);
+    numberDragRef.current = {
+      arrowId: arrow.id,
+      startClientX: clientX,
+      startClientY: clientY,
+      startOffset: arrow.numberOffset ?? { x: 0, y: 0 },
+      moved: false,
+    };
+  }
+
+  function moveDraggedNumber(clientX: number, clientY: number) {
     const drag = numberDragRef.current;
     if (!drag) return;
-    const rawDx = e.clientX - drag.startClientX;
-    const rawDy = e.clientY - drag.startClientY;
+    const rawDx = clientX - drag.startClientX;
+    const rawDy = clientY - drag.startClientY;
     if (Math.hypot(rawDx, rawDy) > DRAG_THRESHOLD) drag.moved = true;
     if (!drag.moved) return;
     const width = size.width || 1;
@@ -628,6 +678,10 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
       y: drag.startOffset.y + rawDy / zoomRef.current / height,
     };
     setArrows((prev) => prev.map((a) => (a.id === drag.arrowId ? { ...a, numberOffset: offset } : a)));
+  }
+
+  function handleNumberPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    moveDraggedNumber(e.clientX, e.clientY);
   }
 
   function handleNumberPointerUp() {
