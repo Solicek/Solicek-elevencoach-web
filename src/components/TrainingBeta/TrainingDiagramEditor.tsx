@@ -606,7 +606,12 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
       startOffset: arrow.numberOffset ?? { x: 0, y: 0 },
       moved: false,
     };
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Bez zachycení ukazatele tah skončí, jakmile prst opustí bublinku – pořád lepší
+      // než spadnout na výjimce.
+    }
   }
 
   function handleNumberPointerMove(e: React.PointerEvent<HTMLDivElement>) {
@@ -847,6 +852,9 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                   border: selectedArrowId === arrow.id ? "2px solid white" : "2px solid rgba(0,0,0,0.25)",
                   cursor: "grab",
                   touchAction: "none",
+                  // Prvky (hráči, kužely) se vykreslují až za čísly, takže by bez z-indexu
+                  // ležely nad nimi a braly dotyk na sebe – tah by pak posunul hráče, ne číslo.
+                  zIndex: 3,
                 }}
               >
                 {arrow.number}
@@ -869,6 +877,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                     onPointerUp={handleArrowHandlePointerUp}
                     title={t("beta.handleHint")}
                     style={{
+                      zIndex: 4,
                       position: "absolute",
                       left: `${p.x * 100}%`,
                       top: `${p.y * 100}%`,
@@ -892,6 +901,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                     removeArrow(selected.id);
                   }}
                   style={{
+                    zIndex: 4,
                     position: "absolute",
                     left: `${mid.x * 100}%`,
                     top: `${mid.y * 100}%`,
@@ -917,6 +927,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                   }}
                   title={t("beta.numberDown")}
                   style={{
+                    zIndex: 4,
                     position: "absolute",
                     left: `${mid.x * 100}%`,
                     top: `${mid.y * 100}%`,
@@ -942,6 +953,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
                   }}
                   title={t("beta.numberUp")}
                   style={{
+                    zIndex: 4,
                     position: "absolute",
                     left: `${mid.x * 100}%`,
                     top: `${mid.y * 100}%`,
