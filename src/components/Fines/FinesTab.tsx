@@ -44,6 +44,14 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
       .sort((a, b) => b.remaining - a.remaining || a.name.localeCompare(b.name));
   }, [lineItems, paidLookup]);
 
+  // Celkové částky za celý tým – kolik je za vybranou sezónu předepsáno, vybráno a kolik
+  // ještě chybí. Trenér to potřebuje jako první číslo, ne až po sečtení řádků hráčů.
+  const teamTotals = useMemo(() => {
+    const owed = perPlayer.reduce((sum, p) => sum + p.owed, 0);
+    const paid = perPlayer.reduce((sum, p) => sum + p.paid, 0);
+    return { owed, paid, remaining: owed - paid };
+  }, [perPlayer]);
+
   return (
     <div style={{ padding: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -68,6 +76,20 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
         </div>
       ) : (
         <>
+          <div className="spacer-16" />
+          <div style={{ display: "flex", gap: 32 }}>
+            <TotalChip label={t("fines.collectedTotal")} amount={teamTotals.paid} color="#2E7D32" />
+            <TotalChip
+              label={t("fines.remainingTotal")}
+              amount={teamTotals.remaining}
+              color={teamTotals.remaining > 0 ? "var(--error)" : "#2E7D32"}
+            />
+          </div>
+          <div className="spacer-8" />
+          <p className="text-gray" style={{ fontSize: "0.8rem" }}>
+            {tf("fines.chargedTotal", { amount: amountLabel(teamTotals.owed) })}
+          </p>
+
           <div className="spacer-16" />
           <p className="text-bold" style={{ fontSize: "0.9rem" }}>
             {t("fines.summaryTitle")}
@@ -138,6 +160,18 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
           }}
         />
       )}
+    </div>
+  );
+}
+
+/** Velké číslo s popiskem pod ním – celková částka za tým (vybráno / zbývá). */
+function TotalChip({ label, amount, color }: { label: string; amount: number; color: string }) {
+  return (
+    <div>
+      <p style={{ fontWeight: 700, fontSize: "1.4rem", color }}>{amountLabel(amount)}</p>
+      <p className="text-gray" style={{ fontSize: "0.75rem" }}>
+        {label}
+      </p>
     </div>
   );
 }
