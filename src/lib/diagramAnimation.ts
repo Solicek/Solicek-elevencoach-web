@@ -10,7 +10,7 @@
  *  - HRÁČ patřící k šipce se najde jako nejbližší prvek k jejímu začátku (do ACTOR_RADIUS),
  *    protože šipka se kreslí od hráče. Když tam žádný není, pohne se jen míč.
  */
-import type { TrainingDiagram, TrainingDiagramArrow, TrainingDiagramElement } from "../types";
+import type { TrainingDiagram, TrainingDiagramArrow } from "../types";
 import { ArrowStyle, DiagramElementType } from "../types";
 import { isCurvedArrowStyle } from "./drawing";
 
@@ -27,6 +27,10 @@ const STEP_PER_LENGTH_MS = 1600;
 const STEP_MAX_MS = 2600;
 /** Pauza mezi kroky, ať je poznat, že jeden skončil a druhý začíná. */
 const STEP_GAP_MS = 250;
+/** Jak blízko si musí být dvě pozice, aby se braly jako stejné místo (díly plochy). */
+const SAME_SPOT = 0.045;
+/** Pojistka proti nekonečnému kolečku u nákresu, který se nikdy nevrátí do výchozího stavu. */
+const MAX_ROUNDS = 8;
 
 /** Styly, u kterých se po šipce veze míč. */
 const BALL_STYLES = new Set<string>([
@@ -175,21 +179,64 @@ export function pathUpTo(points: Point[], t: number, style?: string): Point[] {
   return result;
 }
 
-/** Hráč nejblíž začátku šipky – ten se po ní vydá. */
-function findActor(arrow: TrainingDiagramArrow, elements: TrainingDiagramElement[]): string | null {
+/** Hráč, jeho výchozí místo a to, kde zrovna stojí během skládání animace. */
+interface MovableState {
+  id: string;
+  start: Point;
+  current: Point;
+}
+
+/**
+ * Hráč nejblíž začátku šipky – ten se po ní vydá. Hledá se podle toho, kde hráč stojí PRÁVĚ
+ * TEĎ, ne kde stál na začátku: ve druhém kole rotace jede po šipce ten, kdo mezitím přišel
+ * na její začátek. `taken` hlídá, aby jeden hráč nejel dvě šipky v jednom kroku.
+ */
+function findActorAt(arrow: TrainingDiagramArrow, movables: MovableState[], taken: Set<string>): string | null {
   const start = arrow.points[0];
   if (!start) return null;
   let bestId: string | null = null;
   let bestDistance = ACTOR_RADIUS;
-  for (const element of elements) {
-    if (!MOVABLE_TYPES.has(element.type)) continue;
-    const d = distance(start, element);
+  for (const movable of movables) {
+    if (taken.has(movable.id)) continue;
+    const d = distance(start, movable.current);
     if (d <= bestDistance) {
       bestDistance = d;
-      bestId = element.id;
+      bestId = movable.id;
     }
   }
   return bestId;
+}
+
+/** Stojí každý hráč zase na svém výchozím místě? Pak je kolečko dojeté. */
+function allBackHome(movables: MovableState[]): boolean {
+  return movables.every((m) => distance(m.current, m.start) <= SAME_SPOT);
+}
+
+/**
+ * Obsadili hráči navzájem svá výchozí místa? To je poznávací znamení rotace (čtverec, kde si
+ * každý posune o roh): nikdo není doma, ale všechna výchozí místa jsou zase obsazená. Takový
+ * nákres má smysl přehrát dokola, dokud se všichni nevystřídají. Běžné cvičení, kde hráči
+ * skončí jinde, se naopak přehraje jen jednou.
+ */
+function isRotation(movables: MovableState[]): boolean {
+  if (movables.length < 2) return false;
+  const free = movables.map((m) => m.start);
+  const used = new Array(free.length).fill(false);
+  for (const movable of movables) {
+    let matched = -1;
+    let bestDistance = SAME_SPOT;
+    for (let i = 0; i < free.length; i++) {
+      if (used[i]) continue;
+      const d = distance(movable.current, free[i]);
+      if (d <= bestDistance) {
+        bestDistance = d;
+        matched = i;
+      }
+    }
+    if (matched === -1) return false;
+    used[matched] = true;
+  }
+  return true;
 }
 
 /** Scénář animace složený ze šipek nákresu. Nákres bez šipek vrací prázdnou animaci. */
@@ -205,22 +252,57 @@ export function buildAnimation(diagram: TrainingDiagram): Animation {
     byNumber.get(order)!.push(arrow);
   }
 
+  const orders = Array.from(byNumber.keys()).sort((a, b) => a - b);
+  const movables: MovableState[] = diagram.elements
+    .filter((e) => MOVABLE_TYPES.has(e.type))
+    .map((e) => ({ id: e.id, start: { x: e.x, y: e.y }, current: { x: e.x, y: e.y } }));
+
   const steps: AnimationStep[] = [];
   let cursor = 0;
-  for (const order of Array.from(byNumber.keys()).sort((a, b) => a - b)) {
-    const arrows = byNumber.get(order)!;
-    const moves: AnimationMove[] = arrows.map((arrow) => ({
-      arrowId: arrow.id,
-      path: arrow.points.map((p) => ({ x: p.x, y: p.y })),
-      style: arrow.style,
-      playerId: PLAYER_MOVES_STYLES.has(arrow.style) ? findActor(arrow, diagram.elements) : null,
-      movesBall: BALL_STYLES.has(arrow.style),
-    }));
-    // Krok trvá podle své nejdelší dráhy – souběžné šipky tak doběhnou společně.
-    const longest = Math.max(...arrows.map((a) => pathLength(a.points)));
-    const durationMs = Math.min(STEP_MAX_MS, STEP_BASE_MS + longest * STEP_PER_LENGTH_MS);
-    steps.push({ startMs: cursor, durationMs, moves });
-    cursor += durationMs + STEP_GAP_MS;
+
+  // Jedno "kolo" = projetí všech kroků nákresu. U rotace (čtverec, kde si každý posune o roh)
+  // se kola opakují, dokud se všichni nevrátí na své výchozí místo – tedy právě jedno celé
+  // kolečko. Běžné cvičení, po kterém hráči stojí jinde, se přehraje jen jednou.
+  for (let round = 0; round < MAX_ROUNDS; round++) {
+    let movedSomething = false;
+
+    for (const order of orders) {
+      const arrows = byNumber.get(order)!;
+      const taken = new Set<string>();
+      const moves: AnimationMove[] = arrows.map((arrow) => {
+        const playerId = PLAYER_MOVES_STYLES.has(arrow.style) ? findActorAt(arrow, movables, taken) : null;
+        if (playerId) taken.add(playerId);
+        return {
+          arrowId: arrow.id,
+          path: arrow.points.map((p) => ({ x: p.x, y: p.y })),
+          style: arrow.style,
+          playerId,
+          movesBall: BALL_STYLES.has(arrow.style),
+        };
+      });
+
+      // Po kroku se hráči posunou na konec své dráhy – další krok (i další kolo) už počítá
+      // s novým rozestavením.
+      for (const move of moves) {
+        if (!move.playerId) continue;
+        const movable = movables.find((m) => m.id === move.playerId);
+        const end = move.path[move.path.length - 1];
+        if (movable && distance(movable.current, end) > 1e-6) {
+          movable.current = { x: end.x, y: end.y };
+          movedSomething = true;
+        }
+      }
+
+      // Krok trvá podle své nejdelší dráhy – souběžné šipky tak doběhnou společně.
+      const longest = Math.max(...arrows.map((a) => pathLength(a.points)));
+      const durationMs = Math.min(STEP_MAX_MS, STEP_BASE_MS + longest * STEP_PER_LENGTH_MS);
+      steps.push({ startMs: cursor, durationMs, moves });
+      cursor += durationMs + STEP_GAP_MS;
+    }
+
+    if (!movedSomething) break;
+    if (allBackHome(movables)) break;
+    if (!isRotation(movables)) break;
   }
 
   // Konec se bere z posledního kroku, ne jako "cursor - mezera" – odečítání float čísel

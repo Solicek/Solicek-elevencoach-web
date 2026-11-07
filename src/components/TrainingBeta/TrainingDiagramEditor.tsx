@@ -57,6 +57,9 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
   const [arrows, setArrows] = useState<TrainingDiagramArrow[]>(initialDiagram.arrows);
   const [activeTool, setActiveTool] = useState<string | null>(null);
   const [activeArrowStyle, setActiveArrowStyle] = useState<string>(ArrowStyle.DRIBBLE);
+  // Číslo, které dostane nově nakreslená šipka. `null` = bez čísla (původní chování).
+  // Díky tomu jde nakreslit několik šipek do jednoho kroku bez doklikávání +/−.
+  const [activeStep, setActiveStep] = useState<number | null>(null);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [selectedArrowId, setSelectedArrowId] = useState<string | null>(null);
   const [arrowPreview, setArrowPreview] = useState<Point[] | null>(null);
@@ -459,7 +462,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
       id: crypto.randomUUID(),
       points: points.map((p) => ({ x: p.x / width, y: p.y / height })),
       style: activeArrowStyle,
-      number: null,
+      number: activeStep,
     };
     setArrows((prev) => [...prev, newArrow]);
     setSelectedArrowId(null);
@@ -694,6 +697,12 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
     setActiveTool((prev) => (prev === type ? null : type));
   }
 
+  // Kroky, které už v nákresu existují, plus jeden nový – nabídka pro volbu výše.
+  const usedStepNumbers = Array.from(
+    new Set(arrows.map((a) => a.number).filter((n): n is number => n != null))
+  ).sort((a, b) => a - b);
+  const nextStepNumber = (usedStepNumbers[usedStepNumbers.length - 1] ?? 0) + 1;
+
   const aspectRatio = background === DiagramBackground.HALF ? "1.3" : "0.62";
 
   return (
@@ -787,6 +796,40 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
           </button>
         ))}
       </div>
+
+      <div className="spacer-8" />
+      <div style={{ display: "flex", gap: 8, alignItems: "center", overflowX: "auto", paddingBottom: 4 }}>
+        <span className="text-gray" style={{ fontSize: "0.75rem", flexShrink: 0 }}>
+          {t("beta.stepForNewArrows")}
+        </span>
+        <button
+          className={`chip ${activeStep === null ? "selected" : ""}`}
+          style={{ padding: "4px 10px", fontSize: "0.75rem", flexShrink: 0 }}
+          onClick={() => setActiveStep(null)}
+        >
+          {t("beta.stepNone")}
+        </button>
+        {usedStepNumbers.map((step) => (
+          <button
+            key={step}
+            className={`chip ${activeStep === step ? "selected" : ""}`}
+            style={{ padding: "4px 10px", fontSize: "0.75rem", flexShrink: 0 }}
+            onClick={() => setActiveStep(step)}
+          >
+            {step}
+          </button>
+        ))}
+        <button
+          className={`chip ${activeStep === nextStepNumber ? "selected" : ""}`}
+          style={{ padding: "4px 10px", fontSize: "0.75rem", flexShrink: 0 }}
+          onClick={() => setActiveStep(nextStepNumber)}
+        >
+          {t("beta.stepNew")}
+        </button>
+      </div>
+      <p className="text-gray" style={{ fontSize: "0.7rem" }}>
+        {t("beta.stepHint")}
+      </p>
 
       <div className="spacer-12" />
       <p className="text-gray" style={{ fontSize: "0.75rem", marginBottom: 4 }}>

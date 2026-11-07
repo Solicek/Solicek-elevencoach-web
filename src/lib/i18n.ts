@@ -530,6 +530,13 @@ export const STRINGS = {
   "beta.replay": { cs: "↻ Znovu", en: "↻ Replay" },
   "beta.animation": { cs: "Animace", en: "Animation" },
   "beta.showArrows": { cs: "Ukázat i šipky", en: "Show arrows too" },
+  "beta.stepForNewArrows": { cs: "Krok pro nové šipky:", en: "Step for new arrows:" },
+  "beta.stepNone": { cs: "bez čísla", en: "no number" },
+  "beta.stepNew": { cs: "+ nový", en: "+ new" },
+  "beta.stepHint": {
+    cs: "Šipky se stejným číslem se v animaci přehrají najednou.",
+    en: "Arrows with the same number play at the same time in the animation.",
+  },
   "beta.diagramStatic": { cs: "Nákres", en: "Diagram" },
   "beta.nothingToPlay": {
     cs: "Nákres nemá žádné šipky, není co přehrát. Šipky pořadím (+/−) určují, co jde po sobě.",
