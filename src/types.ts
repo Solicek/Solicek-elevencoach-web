@@ -198,6 +198,8 @@ export interface TrainingDiagramArrow {
   points: DiagramPoint[]; // 0..1, aspoň 2 body; mezilehlé body = kužely/překážky, kolem kterých šipka obíhá
   style: string; // hodnota z ArrowStyle
   number: number | null;
+  /** Posun bublinky s číslem proti středu šipky (0..1), když se čísla překrývají. */
+  numberOffset?: DiagramPoint;
 }
 
 export interface TrainingDiagram {

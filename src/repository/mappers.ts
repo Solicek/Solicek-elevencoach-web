@@ -262,7 +262,10 @@ export function mapToTrainingDiagramElement(m: Doc): TrainingDiagramElement {
 }
 
 export function trainingDiagramArrowToMap(a: TrainingDiagramArrow): Doc {
-  return { id: a.id, points: a.points.map((p) => ({ x: p.x, y: p.y })), style: a.style, number: a.number };
+  const doc: Doc = { id: a.id, points: a.points.map((p) => ({ x: p.x, y: p.y })), style: a.style, number: a.number };
+  // Posun čísla se ukládá, jen když ho trenér opravdu posunul – Firestore neumí undefined.
+  if (a.numberOffset) doc.numberOffset = { x: a.numberOffset.x, y: a.numberOffset.y };
+  return doc;
 }
 
 export function mapToTrainingDiagramArrow(m: Doc): TrainingDiagramArrow {
@@ -272,6 +275,9 @@ export function mapToTrainingDiagramArrow(m: Doc): TrainingDiagramArrow {
     points: pointsRaw.map((p) => ({ x: Number(p.x) || 0, y: Number(p.y) || 0 })),
     style: (m.style as string) ?? "",
     number: typeof m.number === "number" ? m.number : null,
+    numberOffset: m.numberOffset
+      ? { x: Number((m.numberOffset as Doc).x) || 0, y: Number((m.numberOffset as Doc).y) || 0 }
+      : undefined,
   };
 }
 

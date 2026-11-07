@@ -170,14 +170,16 @@ export function TrainingDiagramPreview({ diagram, style, zoomable = false }: Pro
         <canvas ref={canvasRef} style={{ position: "absolute", inset: 0 }} />
         {diagram.arrows.map((arrow) => {
           const mid = arrowMidpoint(arrow.points, arrow.style);
+          // Posun čísla nastavený v editoru platí i tady, ať nákres vypadá všude stejně.
+          const offset = arrow.numberOffset ?? { x: 0, y: 0 };
           return (
             arrow.number != null && (
               <div
                 key={arrow.id}
                 style={{
                   position: "absolute",
-                  left: `${mid.x * 100}%`,
-                  top: `${mid.y * 100}%`,
+                  left: `${(mid.x + offset.x) * 100}%`,
+                  top: `${(mid.y + offset.y) * 100}%`,
                   transform: "translate(-50%, -50%)",
                   width: 18,
                   height: 18,

@@ -566,15 +566,67 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
     setSelectedArrowId((prev) => (prev === id ? null : prev));
   }
 
-  /** +1/-1 k číslu pořadí šipky přímo z plochy hřiště; pod 1 se číslo úplně zruší. */
+  /**
+   * +1/−1 k číslu pořadí šipky přímo z plochy hřiště; pod 1 se číslo úplně zruší.
+   * Šipka BEZ čísla dostane první volné číslo v pořadí (tedy nejvyšší použité + 1),
+   * ne pokaždé jedničku – cvičení se čísluje postupně 1, 2, 3…
+   */
   function bumpArrowNumber(id: string, delta: number) {
-    setArrows((prev) =>
-      prev.map((a) => {
+    setArrows((prev) => {
+      const highest = prev.reduce((max, a) => Math.max(max, a.number ?? 0), 0);
+      return prev.map((a) => {
         if (a.id !== id) return a;
-        const next = (a.number ?? 0) + delta;
+        if (a.number == null) return delta > 0 ? { ...a, number: highest + 1 } : a;
+        const next = a.number + delta;
         return { ...a, number: next > 0 ? next : null };
-      })
-    );
+      });
+    });
+  }
+
+  /** Posun bublinky s číslem – když se dvě čísla překrývají, jde jedno odtáhnout stranou. */
+  const numberDragRef = useRef<{
+    arrowId: string;
+    startClientX: number;
+    startClientY: number;
+    startOffset: Point;
+    moved: boolean;
+  } | null>(null);
+
+  function handleNumberPointerDown(e: React.PointerEvent<HTMLDivElement>, arrow: TrainingDiagramArrow) {
+    if (isPinchingRef.current) return;
+    e.stopPropagation();
+    setSelectedElementId(null);
+    // Klepnutí na číslo rovnou vybere jeho šipku – u překrytých čísel je to jediná
+    // spolehlivá cesta, jak se k té správné šipce dostat.
+    setSelectedArrowId(arrow.id);
+    numberDragRef.current = {
+      arrowId: arrow.id,
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      startOffset: arrow.numberOffset ?? { x: 0, y: 0 },
+      moved: false,
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function handleNumberPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const drag = numberDragRef.current;
+    if (!drag) return;
+    const rawDx = e.clientX - drag.startClientX;
+    const rawDy = e.clientY - drag.startClientY;
+    if (Math.hypot(rawDx, rawDy) > DRAG_THRESHOLD) drag.moved = true;
+    if (!drag.moved) return;
+    const width = size.width || 1;
+    const height = size.height || 1;
+    const offset = {
+      x: drag.startOffset.x + rawDx / zoomRef.current / width,
+      y: drag.startOffset.y + rawDy / zoomRef.current / height,
+    };
+    setArrows((prev) => prev.map((a) => (a.id === drag.arrowId ? { ...a, numberOffset: offset } : a)));
+  }
+
+  function handleNumberPointerUp() {
+    numberDragRef.current = null;
   }
 
   function handleToolSelect(type: string) {
@@ -767,26 +819,34 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
         )}
         {arrows.map((arrow) => {
           const mid = arrowMidpoint(arrow.points, arrow.style);
+          const offset = arrow.numberOffset ?? { x: 0, y: 0 };
           return (
             arrow.number != null && (
               <div
                 key={arrow.id}
+                onPointerDown={(e) => handleNumberPointerDown(e, arrow)}
+                onPointerMove={handleNumberPointerMove}
+                onPointerUp={handleNumberPointerUp}
+                onPointerCancel={handleNumberPointerUp}
                 style={{
                   position: "absolute",
-                  left: `${mid.x * 100}%`,
-                  top: `${mid.y * 100}%`,
+                  left: `${(mid.x + offset.x) * 100}%`,
+                  top: `${(mid.y + offset.y) * 100}%`,
                   transform: "translate(-50%, -50%)",
-                  width: 18,
-                  height: 18,
+                  width: 24,
+                  height: 24,
                   borderRadius: "50%",
                   background: "#ffca28",
                   color: "#000",
-                  fontSize: 11,
+                  fontSize: 13,
                   fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  pointerEvents: "none",
+                  // Vybrané číslo má bílý lem, ať je poznat, které šipky se týkají tlačítka +/−.
+                  border: selectedArrowId === arrow.id ? "2px solid white" : "2px solid rgba(0,0,0,0.25)",
+                  cursor: "grab",
+                  touchAction: "none",
                 }}
               >
                 {arrow.number}
