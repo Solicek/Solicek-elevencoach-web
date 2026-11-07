@@ -41,7 +41,9 @@ export function FinesTab({ archive, fineRates, finePayments, onSaveFineRates, on
     }
     return Array.from(totals.entries())
       .map(([name, { owed, paid }]) => ({ name, owed, paid, remaining: owed - paid }))
-      .sort((a, b) => b.remaining - a.remaining || a.name.localeCompare(b.name));
+      // Řadí se podle CELKOVÉ předepsané částky (ne podle zbytku), ať je nahoře ten, kdo
+      // nasbíral nejvíc – i když má zaplaceno. Při shodě rozhodne, kolik ještě dluží.
+      .sort((a, b) => b.owed - a.owed || b.remaining - a.remaining || a.name.localeCompare(b.name));
   }, [lineItems, paidLookup]);
 
   // Celkové částky za celý tým – kolik je za vybranou sezónu předepsáno, vybráno a kolik
