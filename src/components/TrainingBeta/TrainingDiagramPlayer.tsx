@@ -32,7 +32,6 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
   const [timeMs, setTimeMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [showArrows, setShowArrows] = useState(false);
 
   useEffect(() => {
     setAnimation(buildAnimation(diagram));
@@ -84,19 +83,18 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
     if (diagram.background === DiagramBackground.HALF) drawHalfPitchLines(ctx, size.width, size.height);
     else drawPitchLines(ctx, size.width, size.height);
 
-    // Celé šipky jen na vyžádání a hodně potlačeně, ať nepřebijí pohyb.
-    if (showArrows) {
-      ctx.save();
-      ctx.globalAlpha = 0.22;
-      for (const arrow of diagram.arrows) {
-        drawArrow(
-          ctx,
-          arrow.points.map((p) => ({ x: p.x * size.width, y: p.y * size.height })),
-          arrow.style
-        );
-      }
-      ctx.restore();
+    // Šipky jsou vidět pořád – nesou informaci, kterou samotná stopa neukáže (co je přihrávka
+    // a co běh, kudy se půjde dál). Kreslí se ztlumeně, aby hlavní zůstal pohyb hráčů a míče.
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    for (const arrow of diagram.arrows) {
+      drawArrow(
+        ctx,
+        arrow.points.map((p) => ({ x: p.x * size.width, y: p.y * size.height })),
+        arrow.style
+      );
     }
+    ctx.restore();
 
     // Stopa za pohybem: co se právě jede, je výrazné; dojeté dráhy zůstanou slabě vidět,
     // aby bylo na konci poznat, kudy celé cvičení vedlo.
@@ -115,7 +113,7 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
       ctx.stroke();
       ctx.restore();
     }
-  }, [diagram, size, frame.traces, showArrows]);
+  }, [diagram, size, frame.traces]);
 
   const aspectRatio = diagram.background === DiagramBackground.HALF ? "1.3" : "0.62";
   const hasAnimation = animation.totalMs > 0;
@@ -237,16 +235,13 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
         )}
       </div>
 
-      <div className="spacer-8" />
-      {hasAnimation ? (
-        <label className="checkbox-row" style={{ fontSize: "0.8rem" }}>
-          <input type="checkbox" checked={showArrows} onChange={(e) => setShowArrows(e.target.checked)} />
-          <span>{t("beta.showArrows")}</span>
-        </label>
-      ) : (
-        <p className="text-gray" style={{ fontSize: "0.8rem" }}>
-          {t("beta.nothingToPlay")}
-        </p>
+      {!hasAnimation && (
+        <>
+          <div className="spacer-8" />
+          <p className="text-gray" style={{ fontSize: "0.8rem" }}>
+            {t("beta.nothingToPlay")}
+          </p>
+        </>
       )}
     </div>
   );

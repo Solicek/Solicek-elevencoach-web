@@ -529,7 +529,6 @@ export const STRINGS = {
   "beta.pause": { cs: "⏸ Pauza", en: "⏸ Pause" },
   "beta.replay": { cs: "↻ Znovu", en: "↻ Replay" },
   "beta.animation": { cs: "Animace", en: "Animation" },
-  "beta.showArrows": { cs: "Ukázat i šipky", en: "Show arrows too" },
   "beta.stepForNewArrows": { cs: "Krok pro nové šipky:", en: "Step for new arrows:" },
   "beta.stepNone": { cs: "bez čísla", en: "no number" },
   "beta.stepNew": { cs: "+ nový", en: "+ new" },
