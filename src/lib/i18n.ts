@@ -529,6 +529,8 @@ export const STRINGS = {
   "beta.pause": { cs: "⏸ Pauza", en: "⏸ Pause" },
   "beta.replay": { cs: "↻ Znovu", en: "↻ Replay" },
   "beta.animation": { cs: "Animace", en: "Animation" },
+  "beta.maximize": { cs: "Zvětšit na celou obrazovku", en: "Fullscreen" },
+  "beta.minimize": { cs: "Zavřít celou obrazovku", en: "Exit fullscreen" },
   "beta.stepForNewArrows": { cs: "Krok pro nové šipky:", en: "Step for new arrows:" },
   "beta.stepNone": { cs: "bez čísla", en: "no number" },
   "beta.stepNew": { cs: "+ nový", en: "+ new" },

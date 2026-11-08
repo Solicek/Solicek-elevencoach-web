@@ -19,9 +19,19 @@ const HALF_PITCH_ASPECT = 1.3;
 const SPACE_BELOW_PITCH = 76;
 /** Pod tuhle výšku už hřiště nezmenšujeme, radši se bude scrollovat. */
 const MIN_PITCH_HEIGHT = 260;
+/** Okraj kolem hřiště v režimu na celou obrazovku. */
+const FULLSCREEN_PADDING = 6;
+/** Otočit hřiště napříč displejem se vyplatí, až když tím znatelně povyroste. */
+const TURN_GAIN = 1.1;
 /** Hráči i míč jsou v animaci větší než ve statickém nákresu – jsou to hlavní aktéři. */
 const PLAYER_SIZE = 36;
 const BALL_SIZE = 24;
+
+/** Největší obdélník daného poměru stran, který se vejde do nabídnutého místa. */
+function fitBox(ratio: number, maxWidth: number, maxHeight: number) {
+  const width = Math.min(maxWidth, maxHeight * ratio);
+  return { width, height: width / ratio };
+}
 
 /**
  * Přehrání nákresu jako animace – hráči a míč se pohybují po nakreslených šipkách v pořadí,
@@ -33,9 +43,12 @@ const BALL_SIZE = 24;
  */
 export function TrainingDiagramPlayer({ diagram, style }: Props) {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [availableHeight, setAvailableHeight] = useState<number | null>(null);
+  // Na hřiště se odkazujeme přes callback ref, ne přes useRef: kdyby React jeho uzel někdy
+  // vyměnil, měření se přepne na nový. Jinak by canvas zůstal nakreslený na starou velikost.
+  const [pitchEl, setPitchEl] = useState<HTMLDivElement | null>(null);
+  const [space, setSpace] = useState<{ width: number; height: number; landscape: boolean } | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [animation, setAnimation] = useState<Animation>(() => buildAnimation(diagram));
   const [timeMs, setTimeMs] = useState(0);
@@ -49,33 +62,62 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
   }, [diagram]);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const { width, height } = entries[0].contentRect;
-      setSize({ width, height });
-    });
-    observer.observe(el);
+    if (!pitchEl) return;
+    // Čte se clientWidth/clientHeight, tedy skutečná velikost bez ohledu na to, že je hřiště
+    // na ležícím displeji otočené – rozměry z contentRect u otočeného prvku nejsou spolehlivé.
+    const measureCanvas = () => setSize({ width: pitchEl.clientWidth, height: pitchEl.clientHeight });
+    measureCanvas();
+    const observer = new ResizeObserver(measureCanvas);
+    observer.observe(pitchEl);
     return () => observer.disconnect();
-  }, []);
+  }, [pitchEl]);
 
-  // Kolik výšky okna pod sebou hřiště ještě má. Měří se od jeho horního okraje, takže to
-  // sedí i když se nad ním něco změní (jiný název nákresu, přepínač, otočení displeje).
+  // Kolik místa hřiště dostane. Na stránce se měří od jeho horního okraje dolů, takže to sedí
+  // i když se nad ním něco změní (jiný název nákresu, přepínač, otočení displeje); na celé
+  // obrazovce je k dispozici celé okno.
   useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
     function measure() {
-      const wrapper = wrapperRef.current;
       if (!wrapper) return;
-      const top = wrapper.getBoundingClientRect().top;
-      setAvailableHeight(Math.max(MIN_PITCH_HEIGHT, window.innerHeight - top - SPACE_BELOW_PITCH));
+      const landscape = window.innerWidth > window.innerHeight;
+      const rect = wrapper.getBoundingClientRect();
+      const width = fullscreen ? window.innerWidth - 2 * FULLSCREEN_PADDING : rect.width;
+      const height = fullscreen
+        ? window.innerHeight - 2 * FULLSCREEN_PADDING
+        : Math.max(MIN_PITCH_HEIGHT, window.innerHeight - rect.top - SPACE_BELOW_PITCH);
+      setSpace((prev) =>
+        prev && prev.width === width && prev.height === height && prev.landscape === landscape
+          ? prev
+          : { width, height, landscape }
+      );
     }
     measure();
+    const observer = new ResizeObserver(() => measure());
+    observer.observe(wrapper);
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", measure);
     return () => {
+      observer.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener("orientationchange", measure);
     };
-  }, []);
+  }, [fullscreen]);
+
+  // Na celé obrazovce nemá smysl, aby se pod animací dala rolovat stránka; Esc je zavře.
+  useEffect(() => {
+    if (!fullscreen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [fullscreen]);
 
   // Posun času podle skutečně uplynulých milisekund (ne podle počtu snímků), ať animace trvá
   // stejně dlouho na pomalém i rychlém zařízení. Na konci se sama zastaví.
@@ -145,27 +187,55 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
   const aspect = diagram.background === DiagramBackground.HALF ? HALF_PITCH_ASPECT : FULL_PITCH_ASPECT;
   const hasAnimation = animation.totalMs > 0;
   const atEnd = timeMs >= animation.totalMs;
-  // Na ležícím telefonu vyjde hřiště úzké (výška je malá, poměr 0,62). Lišta se pak musí
-  // uskromnit, jinak by z hřiště vytekla: nejdřív odejdou rychlosti, pak i posuvník –
-  // tlačítko Přehrát musí zůstat vždy.
-  const showSpeeds = size.width >= 300;
-  const showSlider = size.width >= 210;
-  // Hřiště se vejde do zbytku obrazovky pod sebou – jinak by při poměru 0,62 na výšku telefonu
-  // přetékalo dolů a trenér by na konec cvičení musel scrollovat zrovna ve chvíli, kdy běží.
-  const maxWidthFromHeight = availableHeight ? Math.round(availableHeight * aspect) : null;
 
-  return (
-    <div style={style} ref={wrapperRef}>
+  // Hřiště se vejde do místa, které má – jinak by při poměru 0,62 na výšku telefonu přetékalo
+  // dolů a trenér by na konec cvičení musel scrollovat zrovna ve chvíli, kdy běží.
+  const upright = space ? fitBox(aspect, space.width, space.height) : null;
+  // Na ležícím telefonu je výšky málo a šířky přebytek, takže hřiště na výšku vyjde jako úzký
+  // proužek. Otočíme ho proto napříč displejem (hráči zůstanou stát na nohou) – je pak
+  // několikanásobně větší. Na stojícím telefonu se neotáčí nikdy, tam by to jen mátlo.
+  const turned = space ? fitBox(1 / aspect, space.width, space.height) : null;
+  const rotated = Boolean(
+    space?.landscape && upright && turned && turned.width * turned.height > upright.width * upright.height * TURN_GAIN
+  );
+  const box = rotated ? turned : upright;
+  const pitchWidth = box ? Math.round(rotated ? box.height : box.width) : null;
+  const pitchHeight = box ? Math.round(rotated ? box.width : box.height) : null;
+  // Lišta sedí na spodku toho, co je na displeji vidět – u otočeného hřiště je to jeho delší strana.
+  const barWidth = box ? box.width : size.width;
+  // Na úzkém hřišti se lišta uskromní: nejdřív odejdou rychlosti, pak i posuvník.
+  // Tlačítko Přehrát a zvětšení zůstávají vždy.
+  const showSpeeds = barWidth >= 320;
+  const showSlider = barWidth >= 230;
+
+  // Na celou obrazovku se hřiště nepřesouvá jinam do stromu – jen se přepnou styly. Kdyby se
+  // překreslilo pod jiného rodiče, React by jeho uzly zahodil a animace by se restartovala.
+  const player = (
+    <div
+      style={{
+        position: fullscreen ? "fixed" : "relative",
+        left: fullscreen ? "50%" : undefined,
+        top: fullscreen ? "50%" : undefined,
+        transform: fullscreen ? "translate(-50%, -50%)" : undefined,
+        zIndex: fullscreen ? 2001 : undefined,
+        width: box ? Math.round(box.width) : "100%",
+        height: box ? Math.round(box.height) : undefined,
+        aspectRatio: box ? undefined : String(aspect),
+        margin: fullscreen ? undefined : "0 auto",
+      }}
+    >
       <div
-        ref={containerRef}
+        ref={setPitchEl}
         style={{
-          position: "relative",
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: pitchWidth ?? "100%",
+          height: pitchHeight ?? "100%",
+          transform: `translate(-50%, -50%) rotate(${rotated ? 90 : 0}deg)`,
           background: "var(--pitch-green)",
           border: "1px solid white",
           overflow: "hidden",
-          aspectRatio: String(aspect),
-          width: maxWidthFromHeight ? `min(100%, ${maxWidthFromHeight}px)` : "100%",
-          margin: "0 auto",
         }}
       >
         <canvas ref={canvasRef} style={{ position: "absolute", inset: 0 }} />
@@ -188,7 +258,8 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
                 position: "absolute",
                 left: `${position.x * 100}%`,
                 top: `${position.y * 100}%`,
-                transform: `translate(-50%, -50%) rotate(${el.rotation ?? 0}deg) scale(${el.scale ?? 1})`,
+                // Otočené hřiště se dorovná zpátky u každé figurky, ať hráči nestojí na hlavě.
+                transform: `translate(-50%, -50%) rotate(${(el.rotation ?? 0) - (rotated ? 90 : 0)}deg) scale(${el.scale ?? 1})`,
                 // Kdo se právě hýbe, dostane světlý kroužek – v pohybu se oko chytne kontrastu.
                 borderRadius: "50%",
                 boxShadow: isMoving ? "0 0 0 3px rgba(255,255,255,0.9), 0 0 12px rgba(0,0,0,0.5)" : undefined,
@@ -208,79 +279,95 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
               position: "absolute",
               left: `${position.x * 100}%`,
               top: `${position.y * 100}%`,
-              transform: "translate(-50%, -50%)",
+              transform: `translate(-50%, -50%) rotate(${rotated ? -90 : 0}deg)`,
               filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.65))",
             }}
           >
             <DiagramElementIcon type={DiagramElementType.BALL} size={BALL_SIZE} />
           </div>
         ))}
+      </div>
 
-        {/* Ovládání leží přímo ve spodní části hřiště – na výšku telefonu je hřiště vysoké
-            a lišta pod ním by byla až pod okrajem obrazovky, takže by se na přehrání muselo
-            scrollovat. Poloprůhledný podklad, ať jsou čísla čitelná i nad zelenou. */}
-        {hasAnimation && (
-          <div
+      {/* Ovládání leží přímo ve spodní části hřiště – na výšku telefonu je hřiště vysoké
+          a lišta pod ním by byla až pod okrajem obrazovky, takže by se na přehrání muselo
+          scrollovat. Poloprůhledný podklad, ať jsou čísla čitelná i nad zelenou. */}
+      {hasAnimation && (
+        <div
+          style={{
+            position: "absolute",
+            left: 8,
+            right: 8,
+            bottom: 8,
+            display: "flex",
+            alignItems: "center",
+            gap: showSpeeds ? 10 : 6,
+            padding: showSlider ? "8px 10px" : "8px 6px",
+            borderRadius: 12,
+            background: "rgba(0,0,0,0.55)",
+            backdropFilter: "blur(2px)",
+          }}
+        >
+          <button
+            className="btn"
             style={{
-              position: "absolute",
-              left: 8,
-              right: 8,
-              bottom: 8,
-              display: "flex",
-              alignItems: "center",
-              gap: showSpeeds ? 10 : 6,
-              padding: showSlider ? "8px 10px" : "8px 6px",
-              borderRadius: 12,
-              background: "rgba(0,0,0,0.55)",
-              backdropFilter: "blur(2px)",
+              width: "auto",
+              padding: showSlider ? "8px 16px" : "8px 10px",
+              flex: showSlider ? "0 0 auto" : "1 1 auto",
+              minWidth: 0,
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+            onClick={() => {
+              if (atEnd) setTimeMs(0);
+              setIsPlaying(!isPlaying);
             }}
           >
-            <button
-              className="btn"
-              style={{
-                width: "auto",
-                padding: showSlider ? "8px 16px" : "8px 10px",
-                flex: showSlider ? "0 0 auto" : "1 1 auto",
-                minWidth: 0,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
+            {isPlaying ? t("beta.pause") : atEnd ? t("beta.replay") : t("beta.play")}
+          </button>
+          {showSlider && (
+            <input
+              type="range"
+              min={0}
+              max={Math.round(animation.totalMs)}
+              value={Math.round(timeMs)}
+              onChange={(e) => {
+                setIsPlaying(false);
+                setTimeMs(Number(e.target.value));
               }}
-              onClick={() => {
-                if (atEnd) setTimeMs(0);
-                setIsPlaying(!isPlaying);
-              }}
-            >
-              {isPlaying ? t("beta.pause") : atEnd ? t("beta.replay") : t("beta.play")}
-            </button>
-            {showSlider && (
-              <input
-                type="range"
-                min={0}
-                max={Math.round(animation.totalMs)}
-                value={Math.round(timeMs)}
-                onChange={(e) => {
-                  setIsPlaying(false);
-                  setTimeMs(Number(e.target.value));
-                }}
-                style={{ flex: 1, minWidth: 40 }}
-              />
-            )}
-            <div style={{ display: showSpeeds ? "flex" : "none", gap: 4, flexShrink: 0 }}>
-              {SPEEDS.map((value) => (
-                <button
-                  key={value}
-                  className={`chip ${value === speed ? "selected" : ""}`}
-                  style={{ padding: "4px 7px", fontSize: "0.7rem" }}
-                  onClick={() => setSpeed(value)}
-                >
-                  {value}×
-                </button>
-              ))}
-            </div>
+              style={{ flex: 1, minWidth: 40 }}
+            />
+          )}
+          <div style={{ display: showSpeeds ? "flex" : "none", gap: 4, flexShrink: 0 }}>
+            {SPEEDS.map((value) => (
+              <button
+                key={value}
+                className={`chip ${value === speed ? "selected" : ""}`}
+                style={{ padding: "4px 7px", fontSize: "0.7rem" }}
+                onClick={() => setSpeed(value)}
+              >
+                {value}×
+              </button>
+            ))}
           </div>
-        )}
-      </div>
+          <button
+            className="chip"
+            style={{ padding: "4px 9px", fontSize: "0.85rem", flexShrink: 0 }}
+            title={t(fullscreen ? "beta.minimize" : "beta.maximize")}
+            aria-label={t(fullscreen ? "beta.minimize" : "beta.maximize")}
+            onClick={() => setFullscreen(!fullscreen)}
+          >
+            {fullscreen ? "✕" : "⛶"}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <div style={style} ref={wrapperRef}>
+      {fullscreen ? <div style={{ position: "fixed", inset: 0, zIndex: 2000, background: "#0b0b0b" }} /> : null}
+      {player}
 
       {!hasAnimation && (
         <>
