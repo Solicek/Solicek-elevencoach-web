@@ -180,15 +180,29 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
             <DiagramElementIcon type={DiagramElementType.BALL} size={BALL_SIZE} />
           </div>
         ))}
-      </div>
 
-      <div className="spacer-8" />
-      {hasAnimation ? (
-        <>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {/* Ovládání leží přímo ve spodní části hřiště – na výšku telefonu je hřiště vysoké
+            a lišta pod ním by byla až pod okrajem obrazovky, takže by se na přehrání muselo
+            scrollovat. Poloprůhledný podklad, ať jsou čísla čitelná i nad zelenou. */}
+        {hasAnimation && (
+          <div
+            style={{
+              position: "absolute",
+              left: 8,
+              right: 8,
+              bottom: 8,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              padding: "8px 10px",
+              borderRadius: 12,
+              background: "rgba(0,0,0,0.55)",
+              backdropFilter: "blur(2px)",
+            }}
+          >
             <button
               className="btn"
-              style={{ width: "auto", padding: "8px 18px" }}
+              style={{ width: "auto", padding: "8px 16px", flexShrink: 0 }}
               onClick={() => {
                 if (atEnd) setTimeMs(0);
                 setIsPlaying(!isPlaying);
@@ -205,14 +219,14 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
                 setIsPlaying(false);
                 setTimeMs(Number(e.target.value));
               }}
-              style={{ flex: 1 }}
+              style={{ flex: 1, minWidth: 40 }}
             />
-            <div style={{ display: "flex", gap: 4 }}>
+            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
               {SPEEDS.map((value) => (
                 <button
                   key={value}
                   className={`chip ${value === speed ? "selected" : ""}`}
-                  style={{ padding: "4px 8px", fontSize: "0.75rem" }}
+                  style={{ padding: "4px 7px", fontSize: "0.7rem" }}
                   onClick={() => setSpeed(value)}
                 >
                   {value}×
@@ -220,12 +234,15 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
               ))}
             </div>
           </div>
-          <div className="spacer-8" />
-          <label className="checkbox-row" style={{ fontSize: "0.8rem" }}>
-            <input type="checkbox" checked={showArrows} onChange={(e) => setShowArrows(e.target.checked)} />
-            <span>{t("beta.showArrows")}</span>
-          </label>
-        </>
+        )}
+      </div>
+
+      <div className="spacer-8" />
+      {hasAnimation ? (
+        <label className="checkbox-row" style={{ fontSize: "0.8rem" }}>
+          <input type="checkbox" checked={showArrows} onChange={(e) => setShowArrows(e.target.checked)} />
+          <span>{t("beta.showArrows")}</span>
+        </label>
       ) : (
         <p className="text-gray" style={{ fontSize: "0.8rem" }}>
           {t("beta.nothingToPlay")}
