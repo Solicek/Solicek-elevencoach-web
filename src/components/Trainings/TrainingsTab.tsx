@@ -3,7 +3,7 @@ import { Dialog } from "../Shell/Dialog";
 import { TrainingDetailScreen } from "./TrainingDetailScreen";
 import { drillLibrary } from "../../drills";
 import { todayDateString } from "../../lib/dateUtils";
-import type { AttendanceRecord, Drill, Player, TrainingSession, TrainingTemplate } from "../../types";
+import type { AttendanceRecord, Drill, Player, TrainingDiagram, TrainingSession, TrainingTemplate } from "../../types";
 import { t, tf } from "../../lib/i18n";
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   players: Player[];
   attendance: AttendanceRecord[];
   customDrills: Drill[];
+  diagrams: TrainingDiagram[];
   templates: TrainingTemplate[];
   onAddSession: (session: TrainingSession) => void;
   onUpdateSession: (session: TrainingSession) => void;
@@ -29,6 +30,7 @@ export function TrainingsTab({
   players,
   attendance,
   customDrills,
+  diagrams,
   templates,
   onAddSession,
   onUpdateSession,
@@ -54,6 +56,7 @@ export function TrainingsTab({
         players={players}
         attendanceRecord={attendance.find((a) => a.trainingId === selectedSession.id) ?? null}
         allDrills={[...drillLibrary, ...customDrills]}
+        diagrams={diagrams}
         templates={templates}
         onBack={() => setSelectedSessionId(null)}
         onUpdateSession={onUpdateSession}

@@ -11,17 +11,23 @@ import { AddManualBlockDialog } from "./AddManualBlockDialog";
 import { SaveTemplateDialog } from "./SaveTemplateDialog";
 import { InsertTemplateDialog } from "./InsertTemplateDialog";
 import { LiveTrainingScreen } from "./LiveTrainingScreen";
+import { TrainingDiagramViewerDialog } from "../TrainingBeta/TrainingDiagramViewerDialog";
 import { positionSortOrder } from "../../lib/assignment";
 import { AttendanceKind } from "../../types";
-import type { AttendanceRecord, Drill, Player, TrainingSession, TrainingTemplate } from "../../types";
+import type { AttendanceRecord, Drill, Player, TrainingDiagram, TrainingSession, TrainingTemplate } from "../../types";
 import { storedLabel, t, tf } from "../../lib/i18n";
 import { drillText } from "../../lib/drillLabels";
+
+/** Klíč škatulky pro nákresy bez kategorie – nesmí se potkat s názvem skutečné kategorie. */
+const UNCATEGORIZED = "__bez-kategorie__";
 
 interface Props {
   session: TrainingSession;
   players: Player[];
   attendanceRecord: AttendanceRecord | null;
   allDrills: Drill[];
+  /** Nákresy z Tréninku (beta) – v knihovně se řadí do stejných kategorií jako cvičení. */
+  diagrams: TrainingDiagram[];
   templates: TrainingTemplate[];
   onBack: () => void;
   onUpdateSession: (session: TrainingSession) => void;
@@ -40,6 +46,7 @@ export function TrainingDetailScreen({
   players,
   attendanceRecord,
   allDrills,
+  diagrams,
   templates,
   onBack,
   onUpdateSession,
@@ -62,6 +69,7 @@ export function TrainingDetailScreen({
   const [showAiDrillDialog, setShowAiDrillDialog] = useState(false);
   const [showDrillSourcesDialog, setShowDrillSourcesDialog] = useState(false);
   const [enlargedDrill, setEnlargedDrill] = useState<Drill | null>(null);
+  const [viewedDiagramId, setViewedDiagramId] = useState<string | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
 
   function toggleCategory(category: string) {
@@ -90,6 +98,22 @@ export function TrainingDetailScreen({
     list.push(drill);
     drillsByCategory.set(drill.category, list);
   }
+
+  // Nákresy se do knihovny přidávají pod stejné kategorie jako cvičení. Co nikam zařazené
+  // není (starší nákresy), spadne do „Nezařazené“ úplně dole, ať to z knihovny nevypadne.
+  const diagramsByCategory = new Map<string, TrainingDiagram[]>();
+  for (const diagram of diagrams) {
+    const key = diagram.category?.trim() ? diagram.category : UNCATEGORIZED;
+    const list = diagramsByCategory.get(key) ?? [];
+    list.push(diagram);
+    diagramsByCategory.set(key, list);
+  }
+  const categories = [
+    ...drillsByCategory.keys(),
+    ...Array.from(diagramsByCategory.keys()).filter((c) => c !== UNCATEGORIZED && !drillsByCategory.has(c)),
+    ...(diagramsByCategory.has(UNCATEGORIZED) ? [UNCATEGORIZED] : []),
+  ];
+  const viewedDiagram = diagrams.find((d) => d.id === viewedDiagramId) ?? null;
 
   return (
     <div>
@@ -227,7 +251,9 @@ export function TrainingDetailScreen({
       )}
       <div className="spacer-8" />
 
-      {Array.from(drillsByCategory.entries()).map(([category, drills]) => {
+      {categories.map((category) => {
+        const drills = drillsByCategory.get(category) ?? [];
+        const categoryDiagrams = diagramsByCategory.get(category) ?? [];
         const isExpanded = expandedCategories.has(category);
         return (
         <div key={category}>
@@ -237,10 +263,10 @@ export function TrainingDetailScreen({
             onClick={() => toggleCategory(category)}
           >
             <p className="text-bold" style={{ fontSize: "0.9rem", color: "var(--pitch-green)" }}>
-              {storedLabel(category)}
+              {category === UNCATEGORIZED ? t("beta.categoryNone") : storedLabel(category)}
             </p>
             <span className="text-gray" style={{ fontSize: "0.75rem" }}>
-              {drills.length} {isExpanded ? "▾" : "▸"}
+              {drills.length + categoryDiagrams.length} {isExpanded ? "▾" : "▸"}
             </span>
           </div>
           {isExpanded && (
@@ -296,6 +322,23 @@ export function TrainingDetailScreen({
               </div>
             </div>
           ))}
+          {/* Nákres se do plánu nepřidává – v knihovně je jen jako obrázek cvičení, takže
+              stačí název a kliknutí, které otevře náhled s možností spustit animaci. */}
+          {categoryDiagrams.map((diagram) => (
+            <div
+              key={diagram.id}
+              className="list-row"
+              style={{ cursor: "pointer" }}
+              onClick={() => setViewedDiagramId(diagram.id)}
+            >
+              <div style={{ flex: 1 }}>
+                <p style={{ fontSize: "0.9rem" }}>{diagram.name}</p>
+              </div>
+              <span className="chip" style={{ padding: "2px 8px", fontSize: "0.7rem" }}>
+                ▶ {t("beta.diagramStatic")}
+              </span>
+            </div>
+          ))}
           <div className="spacer-8" />
             </>
           )}
@@ -323,6 +366,10 @@ export function TrainingDetailScreen({
       )}
 
       {enlargedDrill && <DrillDiagramViewerDialog drill={enlargedDrill} onDismiss={() => setEnlargedDrill(null)} />}
+
+      {viewedDiagram && (
+        <TrainingDiagramViewerDialog diagram={viewedDiagram} onDismiss={() => setViewedDiagramId(null)} />
+      )}
 
       {showDrillSourcesDialog && <DrillSourcesDialog onDismiss={() => setShowDrillSourcesDialog(false)} />}
 

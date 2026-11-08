@@ -4,7 +4,7 @@ import { TrainingDiagramEditor } from "./TrainingDiagramEditor";
 import { TrainingDiagramViewerDialog } from "./TrainingDiagramViewerDialog";
 import { TrainingDiagramPreview } from "./TrainingDiagramPreview";
 import type { TrainingDiagram } from "../../types";
-import { t } from "../../lib/i18n";
+import { storedLabel, t } from "../../lib/i18n";
 
 interface Props {
   diagrams: TrainingDiagram[];
@@ -56,6 +56,9 @@ export function TrainingBetaTab({ diagrams, readOnly = false, onAdd, onUpdate, o
               <p className="text-bold" style={{ fontSize: "0.85rem", marginTop: 4 }}>
                 {diagram.name}
               </p>
+              <p className="text-gray" style={{ fontSize: "0.7rem" }}>
+                {diagram.category ? storedLabel(diagram.category) : t("beta.categoryNone")}
+              </p>
               <button
                 className="btn-outline"
                 style={{ padding: "6px", fontSize: "0.75rem", marginTop: 4 }}
@@ -84,9 +87,16 @@ export function TrainingBetaTab({ diagrams, readOnly = false, onAdd, onUpdate, o
       {showNewDialog && (
         <NewDiagramDialog
           onDismiss={() => setShowNewDialog(false)}
-          onConfirm={(name, background) => {
+          onConfirm={(name, background, category) => {
             setShowNewDialog(false);
-            setEditingDiagram({ id: crypto.randomUUID(), name, background, elements: [], arrows: [] });
+            setEditingDiagram({
+              id: crypto.randomUUID(),
+              name,
+              background,
+              category: category ?? undefined,
+              elements: [],
+              arrows: [],
+            });
           }}
         />
       )}
@@ -96,6 +106,7 @@ export function TrainingBetaTab({ diagrams, readOnly = false, onAdd, onUpdate, o
           diagram={viewingDiagram}
           readOnly={readOnly}
           onDismiss={() => setViewingId(null)}
+          onChangeCategory={(category) => onUpdate({ ...viewingDiagram, category: category ?? undefined })}
           onEdit={() => {
             setEditingDiagram(viewingDiagram);
             setViewingId(null);

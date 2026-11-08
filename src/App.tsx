@@ -279,6 +279,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
               players={data.players}
               attendance={data.attendance}
               customDrills={data.customDrills}
+              diagrams={data.trainingDiagrams}
               templates={data.trainingTemplates}
               readOnly={isReadOnly}
               onAddSession={(session) => repo.addTrainingSession(teamCode, session)}

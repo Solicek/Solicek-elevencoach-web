@@ -57,3 +57,9 @@ export const drillLibrary: Drill[] = [
   builtin("Kombinace na dva doteky před zakončením", "Zakončení", "Trojice kombinuje na dva doteky, poslední hráč zakončuje do branky s brankářem."),
   builtin("Zakončení pod tlakem obránce", "Zakončení", "Hráč dostává míč zády k brance s obráncem v zádech, musí se otočit a zakončit."),
 ];
+
+/**
+ * Kategorie v pořadí, v jakém je má knihovna – odvozené z cvičení, ať se seznam nemusí
+ * udržovat dvakrát. Nabízejí se i u nákresů, aby obojí padalo do stejných škatulek.
+ */
+export const drillCategories: string[] = Array.from(new Set(drillLibrary.map((d) => d.category)));

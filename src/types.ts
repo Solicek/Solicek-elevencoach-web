@@ -206,6 +206,12 @@ export interface TrainingDiagram {
   id: string;
   name: string;
   background: string; // hodnota z DiagramBackground
+  /**
+   * Kategorie cvičení (Rozcvička, Technika, …, nebo vlastní název trenéra). Stejná škatulka
+   * jako u cvičení v knihovně, aby se nákresy daly v tréninku listovat spolu s nimi.
+   * Starší nákresy ji nemají – ty spadnou do "Nezařazené".
+   */
+  category?: string;
   elements: TrainingDiagramElement[];
   arrows: TrainingDiagramArrow[];
 }
