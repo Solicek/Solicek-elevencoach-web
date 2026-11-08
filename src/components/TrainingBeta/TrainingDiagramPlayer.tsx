@@ -19,8 +19,6 @@ const HALF_PITCH_ASPECT = 1.3;
 const SPACE_BELOW_PITCH = 76;
 /** Pod tuhle výšku už hřiště nezmenšujeme, radši se bude scrollovat. */
 const MIN_PITCH_HEIGHT = 260;
-/** Okraj kolem hřiště v režimu na celou obrazovku. */
-const FULLSCREEN_PADDING = 6;
 /** Otočit hřiště napříč displejem se vyplatí, až když tím znatelně povyroste. */
 const TURN_GAIN = 1.1;
 /** Hráči i míč jsou v animaci větší než ve statickém nákresu – jsou to hlavní aktéři. */
@@ -82,9 +80,9 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
       if (!wrapper) return;
       const landscape = window.innerWidth > window.innerHeight;
       const rect = wrapper.getBoundingClientRect();
-      const width = fullscreen ? window.innerWidth - 2 * FULLSCREEN_PADDING : rect.width;
+      const width = fullscreen ? window.innerWidth : rect.width;
       const height = fullscreen
-        ? window.innerHeight - 2 * FULLSCREEN_PADDING
+        ? window.innerHeight
         : Math.max(MIN_PITCH_HEIGHT, window.innerHeight - rect.top - SPACE_BELOW_PITCH);
       setSpace((prev) =>
         prev && prev.width === width && prev.height === height && prev.landscape === landscape
@@ -195,10 +193,16 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
   // proužek. Otočíme ho proto napříč displejem (hráči zůstanou stát na nohou) – je pak
   // několikanásobně větší. Na stojícím telefonu se neotáčí nikdy, tam by to jen mátlo.
   const turned = space ? fitBox(1 / aspect, space.width, space.height) : null;
-  const rotated = Boolean(
-    space?.landscape && upright && turned && turned.width * turned.height > upright.width * upright.height * TURN_GAIN
-  );
-  const box = rotated ? turned : upright;
+  // Na celé obrazovce se hřiště roztáhne přes celý displej – žádné černé pruhy po stranách.
+  // Poměr stran se tím trochu změní, ale pro animaci je důležitější velikost než přesný tvar
+  // hřiště (středový kruh se kreslí z kratší strany, takže kruhem zůstane).
+  const fullscreenRotated = Boolean(space && space.landscape !== aspect > 1);
+  const rotated = fullscreen
+    ? fullscreenRotated
+    : Boolean(
+        space?.landscape && upright && turned && turned.width * turned.height > upright.width * upright.height * TURN_GAIN
+      );
+  const box = fullscreen && space ? { width: space.width, height: space.height } : rotated ? turned : upright;
   const pitchWidth = box ? Math.round(rotated ? box.height : box.width) : null;
   const pitchHeight = box ? Math.round(rotated ? box.width : box.height) : null;
   // Lišta sedí na spodku toho, co je na displeji vidět – u otočeného hřiště je to jeho delší strana.
@@ -295,9 +299,11 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
         <div
           style={{
             position: "absolute",
-            left: 8,
-            right: 8,
-            bottom: 8,
+            // Na celé obrazovce sahá hřiště až do rohů displeje, takže lišta musí uhnout
+            // výřezu a spodní čárce pro domů – jinak by se na iPhonu překrývaly.
+            left: fullscreen ? "calc(8px + env(safe-area-inset-left, 0px))" : 8,
+            right: fullscreen ? "calc(8px + env(safe-area-inset-right, 0px))" : 8,
+            bottom: fullscreen ? "calc(8px + env(safe-area-inset-bottom, 0px))" : 8,
             display: "flex",
             alignItems: "center",
             gap: showSpeeds ? 10 : 6,
