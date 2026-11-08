@@ -51,6 +51,9 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
   const [animation, setAnimation] = useState<Animation>(() => buildAnimation(diagram));
   const [timeMs, setTimeMs] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  // Za běhu lišta překáží – schová se, aby byl vidět celý pohyb, a klepnutím na hřiště se
+  // zase vytáhne (pauza nebo konec animace ji vrátí sama).
+  const [controlsHidden, setControlsHidden] = useState(false);
   const [speed, setSpeed] = useState(1);
 
   useEffect(() => {
@@ -116,6 +119,8 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
       window.removeEventListener("keydown", onKey);
     };
   }, [fullscreen]);
+
+  useEffect(() => setControlsHidden(isPlaying), [isPlaying]);
 
   // Posun času podle skutečně uplynulých milisekund (ne podle počtu snímků), ať animace trvá
   // stejně dlouho na pomalém i rychlém zařízení. Na konci se sama zastaví.
@@ -227,6 +232,9 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
         aspectRatio: box ? undefined : String(aspect),
         margin: fullscreen ? undefined : "0 auto",
       }}
+      // Klepnutí kamkoli na hřiště lištu přepne. Samotná lišta kliknutí nepouští dál,
+      // aby se při tahu za posuvník nebo změně rychlosti neschovávala.
+      onClick={hasAnimation ? () => setControlsHidden((hidden) => !hidden) : undefined}
     >
       <div
         ref={setPitchEl}
@@ -297,8 +305,12 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
           scrollovat. Poloprůhledný podklad, ať jsou čísla čitelná i nad zelenou. */}
       {hasAnimation && (
         <div
+          onClick={(e) => e.stopPropagation()}
           style={{
             position: "absolute",
+            opacity: controlsHidden ? 0 : 1,
+            pointerEvents: controlsHidden ? "none" : "auto",
+            transition: "opacity 180ms",
             // Na celé obrazovce sahá hřiště až do rohů displeje, takže lišta musí uhnout
             // výřezu a spodní čárce pro domů – jinak by se na iPhonu překrývaly.
             left: fullscreen ? "calc(8px + env(safe-area-inset-left, 0px))" : 8,
