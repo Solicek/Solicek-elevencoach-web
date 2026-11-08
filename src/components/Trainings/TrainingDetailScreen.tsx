@@ -115,6 +115,17 @@ export function TrainingDetailScreen({
   ];
   const viewedDiagram = diagrams.find((d) => d.id === viewedDiagramId) ?? null;
 
+  /** Nákres se do plánu přidá stejně jako cvičení – název jako nadpis bloku, poznámka jako popis. */
+  function addDiagramBlock(diagram: TrainingDiagram) {
+    onUpdateSession({
+      ...session,
+      blocks: [
+        ...session.blocks,
+        { id: crypto.randomUUID(), title: diagram.name, description: diagram.note ?? "", minutes: 10 },
+      ],
+    });
+  }
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between" }}>
@@ -333,10 +344,27 @@ export function TrainingDetailScreen({
             >
               <div style={{ flex: 1 }}>
                 <p style={{ fontSize: "0.9rem" }}>{diagram.name}</p>
+                {diagram.note && (
+                  <p className="text-gray" style={{ fontSize: "0.8rem" }}>
+                    {diagram.note}
+                  </p>
+                )}
               </div>
               <span className="chip" style={{ padding: "2px 8px", fontSize: "0.7rem" }}>
                 ▶ {t("beta.diagramStatic")}
               </span>
+              {!readOnly && (
+                <span
+                  className="text-bold"
+                  style={{ color: "var(--primary)", fontSize: "1.2rem" }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    addDiagramBlock(diagram);
+                  }}
+                >
+                  +
+                </span>
+              )}
             </div>
           ))}
           <div className="spacer-8" />
@@ -368,7 +396,18 @@ export function TrainingDetailScreen({
       {enlargedDrill && <DrillDiagramViewerDialog drill={enlargedDrill} onDismiss={() => setEnlargedDrill(null)} />}
 
       {viewedDiagram && (
-        <TrainingDiagramViewerDialog diagram={viewedDiagram} onDismiss={() => setViewedDiagramId(null)} />
+        <TrainingDiagramViewerDialog
+          diagram={viewedDiagram}
+          onDismiss={() => setViewedDiagramId(null)}
+          onAddToTraining={
+            readOnly
+              ? undefined
+              : () => {
+                  addDiagramBlock(viewedDiagram);
+                  setViewedDiagramId(null);
+                }
+          }
+        />
       )}
 
       {showDrillSourcesDialog && <DrillSourcesDialog onDismiss={() => setShowDrillSourcesDialog(false)} />}

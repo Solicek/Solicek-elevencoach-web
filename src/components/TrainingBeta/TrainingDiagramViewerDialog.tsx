@@ -14,6 +14,9 @@ interface Props {
   onEdit?: () => void;
   onDelete?: () => void;
   onChangeCategory?: (category: string | null) => void;
+  onChangeNote?: (note: string) => void;
+  /** Vyplněné jen při otevření z knihovny v tréninku – odtud se nákres přidává do plánu. */
+  onAddToTraining?: () => void;
 }
 
 export function TrainingDiagramViewerDialog({
@@ -23,10 +26,15 @@ export function TrainingDiagramViewerDialog({
   onEdit,
   onDelete,
   onChangeCategory,
+  onChangeNote,
+  onAddToTraining,
 }: Props) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   // Statický nákres zůstává výchozí – animace je nabídka navíc, ne náhrada.
   const [showAnimation, setShowAnimation] = useState(false);
+  // Poznámka se ukládá až při opuštění políčka, ne po každém písmenu – šetří to zápisy
+  // do Firestore a trenér stejně odklikne Zpět nebo jinam, což pole opustí.
+  const [note, setNote] = useState(diagram.note ?? "");
 
   const actionsVisible = !readOnly && (onDelete || onEdit);
 
@@ -52,6 +60,14 @@ export function TrainingDiagramViewerDialog({
         }}
       >
         <h2 style={{ marginBottom: 8 }}>{diagram.name}</h2>
+        {onAddToTraining && (
+          <>
+            <button className="btn" onClick={onAddToTraining}>
+              {t("beta.addToTraining")}
+            </button>
+            <div className="spacer-12" />
+          </>
+        )}
         {onChangeCategory && !readOnly ? (
           <>
             <label className="field-label">{t("beta.category")}</label>
@@ -63,6 +79,27 @@ export function TrainingDiagramViewerDialog({
           <p className="text-gray" style={{ fontSize: "0.8rem", marginBottom: 16 }}>
             {diagram.category ? storedLabel(diagram.category) : t("beta.categoryNone")}
           </p>
+        )}
+        {onChangeNote && !readOnly ? (
+          <>
+            <label className="field-label">{t("beta.note")}</label>
+            <textarea
+              className="input"
+              style={{ height: 70, resize: "vertical", marginBottom: 12 }}
+              placeholder={t("beta.notePlaceholder")}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              onBlur={() => {
+                if (note.trim() !== (diagram.note ?? "")) onChangeNote(note.trim());
+              }}
+            />
+          </>
+        ) : (
+          diagram.note && (
+            <p className="text-gray" style={{ fontSize: "0.85rem", marginBottom: 12, whiteSpace: "pre-line" }}>
+              {diagram.note}
+            </p>
+          )
         )}
         <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
           <button

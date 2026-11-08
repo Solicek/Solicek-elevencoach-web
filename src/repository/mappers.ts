@@ -287,6 +287,7 @@ export function trainingDiagramToMap(d: TrainingDiagram): Doc {
     background: d.background,
     // Nezařazený nákres ukládá null, ne undefined – to Firestore neumí.
     category: d.category ?? null,
+    note: d.note ?? null,
     elements: d.elements.map(trainingDiagramElementToMap),
     arrows: d.arrows.map(trainingDiagramArrowToMap),
   };
@@ -300,6 +301,7 @@ export function mapToTrainingDiagram(id: string, data: Doc): TrainingDiagram {
     name: (data.name as string) ?? "",
     background: (data.background as string) ?? DiagramBackground.FULL,
     category: (data.category as string) || undefined,
+    note: (data.note as string) || undefined,
     elements: elementsRaw.map(mapToTrainingDiagramElement),
     arrows: arrowsRaw.map(mapToTrainingDiagramArrow),
   };

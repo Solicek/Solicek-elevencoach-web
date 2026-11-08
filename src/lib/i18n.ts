@@ -533,6 +533,12 @@ export const STRINGS = {
   "beta.categoryCustom": { cs: "Vlastní…", en: "Custom…" },
   "beta.categoryCustomPlaceholder": { cs: "Název kategorie", en: "Category name" },
   "beta.categoryNone": { cs: "Nezařazené", en: "Uncategorized" },
+  "beta.note": { cs: "Poznámka", en: "Note" },
+  "beta.notePlaceholder": {
+    cs: "Co se na nákresu procvičuje, pokyny pro hráče…",
+    en: "What the drill practises, instructions for the players…",
+  },
+  "beta.addToTraining": { cs: "+ Přidat do tréninku", en: "+ Add to the training" },
   "beta.openDiagram": { cs: "Otevřít nákres", en: "Open the diagram" },
   "beta.maximize": { cs: "Zvětšit na celou obrazovku", en: "Fullscreen" },
   "beta.minimize": { cs: "Zavřít celou obrazovku", en: "Exit fullscreen" },

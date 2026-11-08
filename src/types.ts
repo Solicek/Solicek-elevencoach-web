@@ -212,6 +212,11 @@ export interface TrainingDiagram {
    * Starší nákresy ji nemají – ty spadnou do "Nezařazené".
    */
   category?: string;
+  /**
+   * Poznámka k nákresu – co se na něm procvičuje, pokyny pro hráče. Hraje stejnou roli jako
+   * popis u cvičení: ukazuje se pod názvem v knihovně a přenese se do bloku tréninku.
+   */
+  note?: string;
   elements: TrainingDiagramElement[];
   arrows: TrainingDiagramArrow[];
 }

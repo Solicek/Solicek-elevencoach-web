@@ -87,13 +87,14 @@ export function TrainingBetaTab({ diagrams, readOnly = false, onAdd, onUpdate, o
       {showNewDialog && (
         <NewDiagramDialog
           onDismiss={() => setShowNewDialog(false)}
-          onConfirm={(name, background, category) => {
+          onConfirm={(name, background, category, note) => {
             setShowNewDialog(false);
             setEditingDiagram({
               id: crypto.randomUUID(),
               name,
               background,
               category: category ?? undefined,
+              note: note || undefined,
               elements: [],
               arrows: [],
             });
@@ -107,6 +108,7 @@ export function TrainingBetaTab({ diagrams, readOnly = false, onAdd, onUpdate, o
           readOnly={readOnly}
           onDismiss={() => setViewingId(null)}
           onChangeCategory={(category) => onUpdate({ ...viewingDiagram, category: category ?? undefined })}
+          onChangeNote={(note) => onUpdate({ ...viewingDiagram, note: note || undefined })}
           onEdit={() => {
             setEditingDiagram(viewingDiagram);
             setViewingId(null);
