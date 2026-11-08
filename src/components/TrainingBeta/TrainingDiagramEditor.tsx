@@ -56,7 +56,9 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
   const [elements, setElements] = useState<TrainingDiagramElement[]>(initialDiagram.elements);
   const [arrows, setArrows] = useState<TrainingDiagramArrow[]>(initialDiagram.arrows);
   const [activeTool, setActiveTool] = useState<string | null>(null);
-  const [activeArrowStyle, setActiveArrowStyle] = useState<string>(ArrowStyle.DRIBBLE);
+  // Po otevření není vybraný žádný nástroj ani styl šipky – tažení po hřišti tak samo od
+  // sebe nic nenakreslí. Dřív tu byla přednastavená šipka a stačilo omylem přejet prstem.
+  const [activeArrowStyle, setActiveArrowStyle] = useState<string | null>(null);
   // Číslo, které dostane nově nakreslená šipka. `null` = bez čísla (původní chování).
   // Díky tomu jde nakreslit několik šipek do jednoho kroku bez doklikávání +/−.
   const [activeStep, setActiveStep] = useState<number | null>(null);
@@ -230,7 +232,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
       drawArrow(ctx, pxPoints, arrow.style);
     }
     if (arrowPreview && arrowPreview.length >= 2) {
-      drawArrow(ctx, arrowPreview, activeArrowStyle);
+      if (activeArrowStyle) drawArrow(ctx, arrowPreview, activeArrowStyle);
     }
   }, [arrows, arrowPreview, size, activeArrowStyle, selectedArrowId]);
 
@@ -345,7 +347,9 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
     setSelectedElementId(null);
     dragWaypointsRef.current = [pt];
     lastRawPointRef.current = pt;
-    setArrowPreview([pt, pt]);
+    // Bez vybraného stylu šipky se nic nekreslí – tažení se ale dál sleduje, aby ťuknutí
+    // pořád umělo vybrat už nakreslenou šipku (přečíslovat ji, smazat).
+    if (activeArrowStyle) setArrowPreview([pt, pt]);
     e.currentTarget.setPointerCapture(e.pointerId);
   }
 
@@ -391,7 +395,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
       for (const c of candidates) waypoints.push(c.elPt);
     }
     lastRawPointRef.current = curRaw;
-    setArrowPreview([...waypoints, curRaw]);
+    if (activeArrowStyle) setArrowPreview([...waypoints, curRaw]);
   }
 
   function handleCanvasPointerUp(e: React.PointerEvent<HTMLCanvasElement>) {
@@ -446,6 +450,9 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
       return;
     }
 
+    // Sem se dojde jen s vybraným stylem (bez něj se tažení vůbec nerozjede), ale typ to neví.
+    const style = activeArrowStyle;
+    if (!style) return;
     const last = waypoints[waypoints.length - 1];
     let points = Math.hypot(end.x - last.x, end.y - last.y) > ARROW_MIN_DISTANCE ? [...waypoints, end] : waypoints;
     if (points.length < 2) return;
@@ -453,7 +460,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
     if (totalLength < ARROW_MIN_DISTANCE) return;
     // Přihrávka vzduchem: prostřední bod pole je přímo tažitelný ovládací bod oblouku
     // (ne mezilehlý waypoint) – při vzniku šipky se rovnou vloží na výchozí pozici oblouku.
-    if (isCurvedArrowStyle(activeArrowStyle) && points.length === 2) {
+    if (isCurvedArrowStyle(style) && points.length === 2) {
       points = [points[0], defaultCurveControlPoint(points[0], points[1]), points[1]];
     }
     const width = size.width || 1;
@@ -461,7 +468,7 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
     const newArrow: TrainingDiagramArrow = {
       id: crypto.randomUUID(),
       points: points.map((p) => ({ x: p.x / width, y: p.y / height })),
-      style: activeArrowStyle,
+      style,
       number: activeStep,
     };
     setArrows((prev) => [...prev, newArrow]);
@@ -774,7 +781,9 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
             key={style}
             data-arrow-style={style}
             onClick={() => {
-              setActiveArrowStyle(style);
+              // Ťuknutí na už vybraný styl ho zase odznačí – dá se tak vrátit do stavu,
+              // kdy tažení nic nekreslí.
+              setActiveArrowStyle((prev) => (prev === style && !activeTool ? null : style));
               setActiveTool(null);
               setSelectedElementId(null);
               setSelectedArrowId(null);
@@ -796,6 +805,11 @@ export function TrainingDiagramEditor({ initialDiagram, onDismiss, onSave }: Pro
           </button>
         ))}
       </div>
+      {!activeTool && !activeArrowStyle && (
+        <p className="text-gray" style={{ fontSize: "0.75rem", marginTop: 4 }}>
+          {t("beta.nothingSelected")}
+        </p>
+      )}
 
       <div className="spacer-8" />
       <div style={{ display: "flex", gap: 8, alignItems: "center", overflowX: "auto", paddingBottom: 4 }}>

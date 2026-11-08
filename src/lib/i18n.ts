@@ -323,6 +323,11 @@ export const STRINGS = {
   "tactics.liveLineup": { cs: "Živá sestava", en: "Live lineup" },
   "tactics.undo": { cs: "Zpět", en: "Undo" },
   "tactics.clear": { cs: "Vymazat", en: "Clear" },
+  "tactics.freeDraw": { cs: "Volné kreslení", en: "Free drawing" },
+  "tactics.nothingSelected": {
+    cs: "Nic není vybrané – ťukni na styl šipky nebo na volné kreslení a pak kresli tažením.",
+    en: "Nothing selected – tap an arrow style or free drawing, then draw by dragging.",
+  },
   "tactics.freeDrawHint": {
     cs: "Volné kreslení – tažením nakreslíš libovolný tvar. Klepnutím na styl šipky se vrátíš k šipkám.",
     en: "Free drawing – drag to draw any shape. Tap an arrow style to go back to arrows.",
@@ -515,6 +520,10 @@ export const STRINGS = {
   "beta.arrowStyleHint": {
     cs: "Styl šipky (vyber a pak kresli tažením po ploše)",
     en: "Arrow style (pick one, then draw by dragging on the pitch)",
+  },
+  "beta.nothingSelected": {
+    cs: "Nic není vybrané – ťukni na prvek nebo styl šipky a pak kresli tažením.",
+    en: "Nothing selected – tap an element or an arrow style, then draw by dragging.",
   },
   "beta.pinchHint": { cs: "Přiblížíš gestem dvou prstů (pinch)", en: "Zoom with a two-finger pinch" },
   "beta.resetZoom": { cs: "Zrušit přiblížení", en: "Reset zoom" },

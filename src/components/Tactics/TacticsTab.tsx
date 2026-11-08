@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { drawArrow, drawPitchLines, drawStroke, sizeCanvasToContainer } from "../../lib/drawing";
-import { allArrowStyles, ArrowStyle } from "../../types";
+import { allArrowStyles } from "../../types";
 import { ArrowStyleIcon } from "../TrainingBeta/ArrowStyleIcon";
 import { formations } from "../../formations";
 import { formationLabel, positionCodeLabel, storedLabel, t, tf } from "../../lib/i18n";
@@ -41,7 +41,11 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
   const [arrows, setArrows] = useState<TacticsArrow[]>([]);
   // `null` = volné kreslení (žádný styl šipky není aktivní) – přepíná se klepnutím na už
   // vybraný styl šipky znovu (viz tlačítka stylů níže), ne samostatným přepínačem navíc.
-  const [activeStyle, setActiveStyle] = useState<string | null>(ArrowStyle.DRIBBLE);
+  // Po otevření není vybrané nic – tažení po ploše nic nenakreslí, dokud si trenér
+  // nevybere styl šipky nebo volné kreslení. Dřív byla přednastavená šipka a stačilo
+  // omylem přejet prstem.
+  const [activeStyle, setActiveStyle] = useState<string | null>(null);
+  const [freeDraw, setFreeDraw] = useState(false);
   const [preview, setPreview] = useState<Point[] | null>(null);
   const dragStartRef = useRef<Point | null>(null);
   const freePointsRef = useRef<Point[]>([]);
@@ -75,10 +79,10 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
       else drawArrow(ctx, arrow.points, arrow.style);
     }
     if (preview && preview.length >= 2) {
-      if (activeStyle === null) drawStroke(ctx, preview);
-      else drawArrow(ctx, preview, activeStyle);
+      if (freeDraw) drawStroke(ctx, preview);
+      else if (activeStyle) drawArrow(ctx, preview, activeStyle);
     }
-  }, [arrows, preview, size, activeStyle]);
+  }, [arrows, preview, size, activeStyle, freeDraw]);
 
   function relativePoint(e: React.PointerEvent<HTMLDivElement>): Point {
     const rect = containerRef.current!.getBoundingClientRect();
@@ -92,6 +96,7 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
   }
 
   function handlePointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!freeDraw && !activeStyle) return;
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     const start = relativePoint(e);
     dragStartRef.current = start;
@@ -102,7 +107,7 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
     const start = dragStartRef.current;
     if (!start) return;
     const current = relativePoint(e);
-    if (activeStyle === null) {
+    if (freeDraw) {
       freePointsRef.current.push(current);
       setPreview([...freePointsRef.current]);
     } else {
@@ -114,13 +119,14 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
     dragStartRef.current = null;
     setPreview(null);
     if (!start) return;
-    if (activeStyle === null) {
+    if (freeDraw) {
       const points = freePointsRef.current;
       freePointsRef.current = [];
       if (points.length < 2 || pathLength(points) < ARROW_MIN_DISTANCE) return;
       setArrows((a) => [...a, { points, style: null }]);
       return;
     }
+    if (!activeStyle) return;
     const end = relativePoint(e);
     if (Math.hypot(end.x - start.x, end.y - start.y) < ARROW_MIN_DISTANCE) return;
     setArrows((a) => [...a, { points: [start, end], style: activeStyle }]);
@@ -151,7 +157,10 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
         {allArrowStyles.map((style) => (
           <button
             key={style}
-            onClick={() => setActiveStyle((prev) => (prev === style ? null : style))}
+            onClick={() => {
+              setActiveStyle((prev) => (prev === style ? null : style));
+              setFreeDraw(false);
+            }}
             title={storedLabel(style)}
             style={{
               flexShrink: 0,
@@ -168,10 +177,36 @@ export function TacticsTab({ formationName, names, matchLabel }: Props) {
             <ArrowStyleIcon style={style} />
           </button>
         ))}
+        {/* Volné kreslení bývalo schované pod odznačením šipky – teď má vlastní tlačítko,
+            jinak by se po startu „nic vybraného" nedalo vyvolat. */}
+        <button
+          onClick={() => {
+            setFreeDraw((prev) => !prev);
+            setActiveStyle(null);
+          }}
+          title={t("tactics.freeDraw")}
+          style={{
+            flexShrink: 0,
+            padding: "4px 10px",
+            borderRadius: 8,
+            border: freeDraw ? "2px solid var(--primary)" : "2px solid transparent",
+            background: "var(--surface-variant)",
+            cursor: "pointer",
+            color: "inherit",
+            fontSize: "0.8rem",
+          }}
+        >
+          ✎
+        </button>
       </div>
-      {activeStyle === null && (
+      {freeDraw && (
         <p className="text-gray" style={{ fontSize: "0.75rem", marginTop: 4 }}>
           {t("tactics.freeDrawHint")}
+        </p>
+      )}
+      {!freeDraw && !activeStyle && (
+        <p className="text-gray" style={{ fontSize: "0.75rem", marginTop: 4 }}>
+          {t("tactics.nothingSelected")}
         </p>
       )}
 
