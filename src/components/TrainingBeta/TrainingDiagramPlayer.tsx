@@ -12,6 +12,13 @@ interface Props {
 }
 
 const SPEEDS = [0.5, 1, 1.5];
+/** Poměr šířka/výška hřiště – celé je na výšku, půlka na šířku. */
+const FULL_PITCH_ASPECT = 0.62;
+const HALF_PITCH_ASPECT = 1.3;
+/** Co pod hřištěm zůstane na tlačítka (Smazat / Upravit / Zpět) a okraje. */
+const SPACE_BELOW_PITCH = 76;
+/** Pod tuhle výšku už hřiště nezmenšujeme, radši se bude scrollovat. */
+const MIN_PITCH_HEIGHT = 260;
 /** Hráči i míč jsou v animaci větší než ve statickém nákresu – jsou to hlavní aktéři. */
 const PLAYER_SIZE = 36;
 const BALL_SIZE = 24;
@@ -25,8 +32,10 @@ const BALL_SIZE = 24;
  * projel, takže je pořád jasné, kudy se šlo, ale plocha zůstane čistá.
  */
 export function TrainingDiagramPlayer({ diagram, style }: Props) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [availableHeight, setAvailableHeight] = useState<number | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [animation, setAnimation] = useState<Animation>(() => buildAnimation(diagram));
   const [timeMs, setTimeMs] = useState(0);
@@ -48,6 +57,24 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
     });
     observer.observe(el);
     return () => observer.disconnect();
+  }, []);
+
+  // Kolik výšky okna pod sebou hřiště ještě má. Měří se od jeho horního okraje, takže to
+  // sedí i když se nad ním něco změní (jiný název nákresu, přepínač, otočení displeje).
+  useEffect(() => {
+    function measure() {
+      const wrapper = wrapperRef.current;
+      if (!wrapper) return;
+      const top = wrapper.getBoundingClientRect().top;
+      setAvailableHeight(Math.max(MIN_PITCH_HEIGHT, window.innerHeight - top - SPACE_BELOW_PITCH));
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
   }, []);
 
   // Posun času podle skutečně uplynulých milisekund (ne podle počtu snímků), ať animace trvá
@@ -115,12 +142,20 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
     }
   }, [diagram, size, frame.traces]);
 
-  const aspectRatio = diagram.background === DiagramBackground.HALF ? "1.3" : "0.62";
+  const aspect = diagram.background === DiagramBackground.HALF ? HALF_PITCH_ASPECT : FULL_PITCH_ASPECT;
   const hasAnimation = animation.totalMs > 0;
   const atEnd = timeMs >= animation.totalMs;
+  // Na ležícím telefonu vyjde hřiště úzké (výška je malá, poměr 0,62). Lišta se pak musí
+  // uskromnit, jinak by z hřiště vytekla: nejdřív odejdou rychlosti, pak i posuvník –
+  // tlačítko Přehrát musí zůstat vždy.
+  const showSpeeds = size.width >= 300;
+  const showSlider = size.width >= 210;
+  // Hřiště se vejde do zbytku obrazovky pod sebou – jinak by při poměru 0,62 na výšku telefonu
+  // přetékalo dolů a trenér by na konec cvičení musel scrollovat zrovna ve chvíli, kdy běží.
+  const maxWidthFromHeight = availableHeight ? Math.round(availableHeight * aspect) : null;
 
   return (
-    <div style={style}>
+    <div style={style} ref={wrapperRef}>
       <div
         ref={containerRef}
         style={{
@@ -128,7 +163,9 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
           background: "var(--pitch-green)",
           border: "1px solid white",
           overflow: "hidden",
-          aspectRatio,
+          aspectRatio: String(aspect),
+          width: maxWidthFromHeight ? `min(100%, ${maxWidthFromHeight}px)` : "100%",
+          margin: "0 auto",
         }}
       >
         <canvas ref={canvasRef} style={{ position: "absolute", inset: 0 }} />
@@ -191,8 +228,8 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
               bottom: 8,
               display: "flex",
               alignItems: "center",
-              gap: 10,
-              padding: "8px 10px",
+              gap: showSpeeds ? 10 : 6,
+              padding: showSlider ? "8px 10px" : "8px 6px",
               borderRadius: 12,
               background: "rgba(0,0,0,0.55)",
               backdropFilter: "blur(2px)",
@@ -200,7 +237,15 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
           >
             <button
               className="btn"
-              style={{ width: "auto", padding: "8px 16px", flexShrink: 0 }}
+              style={{
+                width: "auto",
+                padding: showSlider ? "8px 16px" : "8px 10px",
+                flex: showSlider ? "0 0 auto" : "1 1 auto",
+                minWidth: 0,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
               onClick={() => {
                 if (atEnd) setTimeMs(0);
                 setIsPlaying(!isPlaying);
@@ -208,18 +253,20 @@ export function TrainingDiagramPlayer({ diagram, style }: Props) {
             >
               {isPlaying ? t("beta.pause") : atEnd ? t("beta.replay") : t("beta.play")}
             </button>
-            <input
-              type="range"
-              min={0}
-              max={Math.round(animation.totalMs)}
-              value={Math.round(timeMs)}
-              onChange={(e) => {
-                setIsPlaying(false);
-                setTimeMs(Number(e.target.value));
-              }}
-              style={{ flex: 1, minWidth: 40 }}
-            />
-            <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
+            {showSlider && (
+              <input
+                type="range"
+                min={0}
+                max={Math.round(animation.totalMs)}
+                value={Math.round(timeMs)}
+                onChange={(e) => {
+                  setIsPlaying(false);
+                  setTimeMs(Number(e.target.value));
+                }}
+                style={{ flex: 1, minWidth: 40 }}
+              />
+            )}
+            <div style={{ display: showSpeeds ? "flex" : "none", gap: 4, flexShrink: 0 }}>
               {SPEEDS.map((value) => (
                 <button
                   key={value}
