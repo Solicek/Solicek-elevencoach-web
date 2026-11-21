@@ -9,6 +9,7 @@ import { PlayerSeasonTable } from "./PlayerSeasonTable";
 import { buildPlayerTable, filterByCompetitive } from "../../lib/playerSeasonTable";
 import {
   currentSeasonPart,
+  currentSeasonStartYear,
   defaultSeasonStartYear,
   inSeason,
   inSeasonPart,
@@ -89,30 +90,53 @@ export function SeasonTab({
       .sort((a, b) => compareDateStrings(b.date, a.date));
   }, [archive]);
 
+  // Totéž pro docházku. Zapsat ji dopředu jde (trénink se dá naplánovat v Kalendáři), ale do
+  // statistiky toho, co se odehrálo, dopředu zapsaný termín nepatří – jinak by v lednu
+  // vycházela účast z tréninků, které teprve budou.
+  const pastAttendance = useMemo(() => {
+    const today = todayDateString();
+    return attendance.filter((a) => compareDateStrings(a.date, today) <= 0);
+  }, [attendance]);
+
   // Nabídka sezón vychází ze zápasů i z docházky – jinak by sezóna, ve které se jen trénovalo,
   // v přepínači chyběla.
   const seasons = useMemo(
-    () => listSeasonStartYears([...playedArchive.map((e) => e.date), ...attendance.map((a) => a.date)]),
-    [playedArchive, attendance]
+    () => listSeasonStartYears([...playedArchive.map((e) => e.date), ...pastAttendance.map((a) => a.date)]),
+    [playedArchive, pastAttendance]
   );
   const [selectedSeason, setSelectedSeason] = useState<number | null | undefined>(undefined);
   // `undefined` = trenér zatím nevybíral, bere se výchozí sezóna (dopočítá se, až dorazí data).
   const activeSeason = selectedSeason === undefined ? defaultSeasonStartYear(seasons) : selectedSeason;
 
-  // Otevře se polovina sezóny, ve které jsme dnes.
   const [selectedPart, setSelectedPart] = useState<SeasonPart | undefined>(undefined);
   // Nad volbou "Vše" (napříč sezónami) nedávají poloviny smysl a přepínač se skrývá. Musí se
   // pak i přestat filtrovat – jinak by schovaný "podzim" dál tiše ořezával data.
   const partsVisible = seasonPartsAvailable() && activeSeason !== null;
-  const activePart: SeasonPart = partsVisible ? selectedPart ?? currentSeasonPart() : "whole";
+
+  /**
+   * Která polovina se nabídne, dokud si trenér nevybere sám: probíhající polovina
+   * PROBÍHAJÍCÍ sezóny, a jen pokud v ní už něco je. Jinak celek.
+   *
+   * Bez té podmínky by appka od ledna do prvního jarního zápasu otevírala prázdné jaro
+   * a trenér by přes zimní pauzu koukal na hlášku místo na podzimní čísla. U starších
+   * sezón je celek stejně to, co člověk zpětně hledá.
+   */
+  const defaultPart: SeasonPart = useMemo(() => {
+    if (!partsVisible || activeSeason !== currentSeasonStartYear()) return "whole";
+    const part = currentSeasonPart();
+    const itemsInSeason = [...inSeason(playedArchive, activeSeason), ...inSeason(pastAttendance, activeSeason)];
+    return inSeasonPart(itemsInSeason, part).length > 0 ? part : "whole";
+  }, [partsVisible, activeSeason, playedArchive, pastAttendance]);
+
+  const activePart: SeasonPart = partsVisible ? selectedPart ?? defaultPart : "whole";
 
   const periodArchive = useMemo(
     () => inSeasonPart(inSeason(playedArchive, activeSeason), activePart),
     [playedArchive, activeSeason, activePart]
   );
   const periodAttendance = useMemo(
-    () => inSeasonPart(inSeason(attendance, activeSeason), activePart),
-    [attendance, activeSeason, activePart]
+    () => inSeasonPart(inSeason(pastAttendance, activeSeason), activePart),
+    [pastAttendance, activeSeason, activePart]
   );
 
   const tableRows = useMemo(
@@ -202,7 +226,7 @@ export function SeasonTab({
     );
   }
 
-  if (playedArchive.length === 0 && attendance.length === 0) {
+  if (playedArchive.length === 0 && pastAttendance.length === 0) {
     return (
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "50dvh" }}>
         <p className="text-gray" style={{ textAlign: "center", whiteSpace: "pre-line" }}>
