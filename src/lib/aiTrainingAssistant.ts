@@ -65,7 +65,13 @@ const generateTrainingPlanFn = httpsCallable<
 /** Chyby z funkce chodí česky (jsou psané pro log), trenér vidí hlášku ve svém jazyce podle kódu. */
 function describeAiError(e: unknown): Error {
   const code = (e as { code?: string }).code ?? "";
-  // "resource-exhausted" = Gemini je přetížené (dočasné), "unavailable" = nedostupná síť.
+  // Vyčerpaný limit chodí jako "resource-exhausted" se jménem limitu v details, ať trenér
+  // pozná, jestli má počkat minutu, nebo do zítřka – viz reserveAiCall v functions/index.js.
+  const reason = (e as { details?: { reason?: string } }).details?.reason ?? "";
+  if (reason === "team-daily") return new Error(t("ai.limitTeamDaily"));
+  if (reason === "team-minute") return new Error(t("ai.limitTeamMinute"));
+  if (reason === "global-daily") return new Error(t("ai.limitGlobal"));
+  // "resource-exhausted" bez důvodu = Gemini je přetížené (dočasné), "unavailable" = síť.
   if (code.includes("resource-exhausted")) return new Error(t("ai.busy"));
   if (code.includes("unauthenticated") || code.includes("permission-denied")) return new Error(t("ai.notAllowed"));
   return new Error(code.includes("unavailable") ? t("ai.network") : t("tr.aiFailed"));

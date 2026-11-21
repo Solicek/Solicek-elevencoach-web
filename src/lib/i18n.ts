@@ -501,6 +501,18 @@ export const STRINGS = {
     cs: "Gemini vrátilo neočekávanou odpověď, zkus to prosím znovu.",
     en: "Gemini returned an unexpected response, please try again.",
   },
+  "ai.limitTeamDaily": {
+    cs: "Tým dnes vyčerpal denní limit AI. Zkus to zítra, nebo vyber cvičení z knihovny níž.",
+    en: "The team has used up today's AI allowance. Try again tomorrow, or pick a drill from the library below.",
+  },
+  "ai.limitTeamMinute": {
+    cs: "Moc generování těsně za sebou. Dej tomu minutu a zkus to znovu.",
+    en: "Too many generations in a row. Give it a minute and try again.",
+  },
+  "ai.limitGlobal": {
+    cs: "AI je dnes vytížená napříč celou aplikací. Zkus to zítra, nebo vyber cvičení z knihovny níž.",
+    en: "The app's AI is fully booked for today. Try again tomorrow, or pick a drill from the library below.",
+  },
   "tr.sourcesTitle": { cs: "Zdroje cvičení online", en: "Drill sources online" },
   "tr.sourcesHint": {
     cs: "Vyzkoušené weby s hotovými tréninkovými cvičeními. Co se ti bude líbit, si pak přidej jako vlastní cvičení tady v appce.",

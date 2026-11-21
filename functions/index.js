@@ -4,10 +4,15 @@ const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 
+const { createAiQuota } = require("./aiQuota");
+
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
 
 initializeApp();
 const db = getFirestore();
+
+/** Limity AI: na tým za den, na tým za minutu a na celou aplikaci za den. */
+const { reserveAiCall, refundAiCall } = createAiQuota(db);
 
 /**
  * Vynucení App Checku (ověření, že volání přišlo z opravdové appky, ne ze skriptu). Zapíná se
@@ -37,7 +42,9 @@ async function assertCallerAllowed(request) {
   if (!team.exists) {
     throw new HttpsError("permission-denied", "Tým s tímhle kódem neexistuje.");
   }
+  return teamCode;
 }
+
 
 const RESPONSE_SCHEMA = {
   type: "OBJECT",
@@ -188,7 +195,7 @@ async function askGemini(body) {
  * strukturovaná data (players/passSequence), vykreslení diagramu (kroužky/šipky) dělá klient.
  */
 exports.generateTrainingDrill = onCall(CALL_OPTIONS, async (request) => {
-  await assertCallerAllowed(request);
+  const teamCode = await assertCallerAllowed(request);
   const promptText = String(request.data?.promptText ?? "").trim();
   // Jazyk posílá klient (podle nastavení zařízení); neznámá hodnota padá na češtinu.
   const lang = request.data?.lang === "en" ? "en" : "cs";
@@ -204,12 +211,21 @@ exports.generateTrainingDrill = onCall(CALL_OPTIONS, async (request) => {
     },
   };
 
-  const text = await askGemini(body);
+  // Limit se započítá až tady – odmítnutý požadavek (prázdný popis) trenéra pokus nestojí.
+  await reserveAiCall(teamCode);
+  let text;
+  try {
+    text = await askGemini(body);
+  } catch (e) {
+    await refundAiCall(teamCode);
+    throw e;
+  }
   try {
     const root = JSON.parse(text);
     const generatedText = root.candidates[0].content.parts[0].text;
     return JSON.parse(generatedText);
   } catch (e) {
+    await refundAiCall(teamCode);
     throw new HttpsError("internal", "Gemini vrátilo neočekávanou odpověď, zkus to prosím znovu.");
   }
 });
@@ -268,7 +284,7 @@ function buildPlanInstructions(promptText, lang, minutes) {
  * s minutami), ne jedno cvičení. Appka si bloky jen vloží do tréninku.
  */
 exports.generateTrainingPlan = onCall(CALL_OPTIONS, async (request) => {
-  await assertCallerAllowed(request);
+  const teamCode = await assertCallerAllowed(request);
   const promptText = String(request.data?.promptText ?? "").trim();
   const lang = request.data?.lang === "en" ? "en" : "cs";
   // Délka tréninku z appky; mimo rozumný rozsah se srovná, ať model nedostane nesmysl.
@@ -285,12 +301,21 @@ exports.generateTrainingPlan = onCall(CALL_OPTIONS, async (request) => {
     },
   };
 
-  const text = await askGemini(body);
+  // Limit se započítá až tady – odmítnutý požadavek (prázdný popis) trenéra pokus nestojí.
+  await reserveAiCall(teamCode);
+  let text;
+  try {
+    text = await askGemini(body);
+  } catch (e) {
+    await refundAiCall(teamCode);
+    throw e;
+  }
   try {
     const root = JSON.parse(text);
     const generatedText = root.candidates[0].content.parts[0].text;
     return JSON.parse(generatedText);
   } catch (e) {
+    await refundAiCall(teamCode);
     throw new HttpsError("internal", "Gemini vrátilo neočekávanou odpověď, zkus to prosím znovu.");
   }
 });

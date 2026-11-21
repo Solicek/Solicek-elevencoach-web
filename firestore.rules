@@ -55,9 +55,19 @@ service cloud.firestore {
         allow write: if signedIn() && memberUid == request.auth.uid;
       }
 
+      // Počítadlo vyčerpaných generování AI. Píše ho jen server (Admin SDK jde mimo pravidla);
+      // kdyby do něj směla appka, stačilo by ho vynulovat a limit by nic neznamenal.
+      // Čtení povolené, ať jde případně ukázat, kolik dnes týmu zbývá.
+      match /aiUsage/{day} {
+        allow read: if mayUseTeam(teamCode);
+        allow write: if false;
+      }
+
       // Hráči, docházka, tréninky, archiv, nákresy, šablony, pokuty…
+      // Pravidla se sčítají (stačí, aby přístup povolilo kterékoli), takže aiUsage se musí
+      // vyjmout tady – samotné přísnější pravidlo výš by ho neochránilo.
       match /{sub}/{docId=**} {
-        allow read, write: if mayUseTeam(teamCode);
+        allow read, write: if sub != 'aiUsage' && mayUseTeam(teamCode);
       }
     }
 
