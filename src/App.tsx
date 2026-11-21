@@ -6,8 +6,7 @@ import { TeamGateScreen } from "./components/TeamGate/TeamGateScreen";
 import { AppShell } from "./components/Shell/AppShell";
 import { PlayersTab } from "./components/Roster/PlayersTab";
 import { PitchTab } from "./components/Lineup/PitchTab";
-import { ArchiveTab } from "./components/Archive/ArchiveTab";
-import { AttendanceTab } from "./components/Attendance/AttendanceTab";
+import { SeasonTab } from "./components/Season/SeasonTab";
 import { TrainingsTab } from "./components/Trainings/TrainingsTab";
 import { TrainingBetaTab } from "./components/TrainingBeta/TrainingBetaTab";
 import { TacticsTab } from "./components/Tactics/TacticsTab";
@@ -15,7 +14,6 @@ import { FinesTab } from "./components/Fines/FinesTab";
 import { CalendarTab } from "./components/Calendar/CalendarTab";
 import { InstallHint } from "./components/Shell/InstallHint";
 import {
-  AttendanceIcon,
   CalendarIcon,
   FinesIcon,
   PitchIcon,
@@ -246,11 +244,13 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           ),
         },
         {
-          label: t("nav.history"),
+          // Historie a Docházka byly dvě záložky nad stejnými zápasy a termíny; trenér si
+          // musel góly a účast srovnávat v hlavě. Sloučené do jedné, viz SeasonTab.
+          label: t("nav.season"),
           icon: <TrophyIcon />,
           primary: true,
           content: (
-            <ArchiveTab
+            <SeasonTab
               teamCode={teamCode}
               teamName={data.teamName}
               archive={data.archive}
@@ -261,20 +261,7 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
               onDeleteEntry={(entry) => repo.deleteArchiveEntry(teamCode, entry)}
               onAddAttendanceRecord={(record) => repo.addAttendanceRecord(teamCode, record)}
               onUpdateAttendanceRecord={(record) => repo.updateAttendanceRecord(teamCode, record)}
-            />
-          ),
-        },
-        {
-          label: t("nav.attendance"),
-          icon: <AttendanceIcon />,
-          primary: false,
-          content: (
-            <AttendanceTab
-              players={data.players}
-              attendance={data.attendance}
-              readOnly={isReadOnly}
-              onUpdateRecord={(record) => repo.updateAttendanceRecord(teamCode, record)}
-              onDeleteRecord={(record) => repo.deleteAttendanceRecord(teamCode, record)}
+              onDeleteAttendanceRecord={(record) => repo.deleteAttendanceRecord(teamCode, record)}
             />
           ),
         },

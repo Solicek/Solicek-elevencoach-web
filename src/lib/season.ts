@@ -67,3 +67,39 @@ export function inSeason<T extends { date: string }>(items: T[], startYear: numb
   if (startYear === null) return items;
   return items.filter((item) => seasonStartYear(item.date) === startYear);
 }
+
+/**
+ * Část sezóny. V české amatérské kopané se sezóna hraje na dvě poloviny: podzim (červenec až
+ * prosinec) a jaro (leden až červen). Stejně jako sezóna se odvozuje z data, takže funguje
+ * zpětně a nic se neukládá.
+ *
+ * U ligy hrané v rámci kalendářního roku (SEASON_START_MONTH = 1) dělení na poloviny nedává
+ * smysl – tam se nabízí jen "celá sezóna", viz seasonPartsAvailable().
+ */
+export type SeasonPart = "autumn" | "spring" | "whole";
+
+/** Do které poloviny sezóny datum spadá; null u nesmyslného data. */
+export function seasonPartOf(dateString: string): Exclude<SeasonPart, "whole"> | null {
+  const date = parseDateString(dateString);
+  if (!date) return null;
+  const month = date.getMonth() + 1;
+  // Podzim = od začátku sezóny do konce roku, jaro = zbytek.
+  return month >= SEASON_START_MONTH ? "autumn" : "spring";
+}
+
+/** Dělení na poloviny má smysl jen u sezóny přes přelom roku. */
+export function seasonPartsAvailable(): boolean {
+  return SEASON_START_MONTH !== 1;
+}
+
+/** Polovina sezóny, ve které jsme dnes. */
+export function currentSeasonPart(): Exclude<SeasonPart, "whole"> {
+  const month = new Date().getMonth() + 1;
+  return month >= SEASON_START_MONTH ? "autumn" : "spring";
+}
+
+/** Filtr položek s datem na polovinu sezóny; "whole" = bez filtru. */
+export function inSeasonPart<T extends { date: string }>(items: T[], part: SeasonPart): T[] {
+  if (part === "whole") return items;
+  return items.filter((item) => seasonPartOf(item.date) === part);
+}
