@@ -243,6 +243,22 @@ export function SeasonTab({
   const periodName = [seasonName, partName?.toLocaleLowerCase("cs")].filter(Boolean).join(" · ") || null;
   const isEmptyPeriod = periodArchive.length === 0 && periodAttendance.length === 0;
 
+  // Přepínač zobrazení musí být vidět i nad výsledky hledání – jinak by z nich nešlo odejít
+  // jinak než smazáním hledaného textu a vypadalo by to jako zaseknutá obrazovka.
+  const viewSwitch = (
+    <ChipRow>
+      <Chip
+        selected={view === "players"}
+        onClick={() => {
+          setView("players");
+          setSearch("");
+        }}
+        label={t("season.viewPlayers")}
+      />
+      <Chip selected={view === "entries"} onClick={() => setView("entries")} label={t("season.viewEntries")} />
+    </ChipRow>
+  );
+
   return (
     <div style={{ position: "relative", minHeight: "60dvh" }}>
       {/* Hledání soupeře patří k zápisům; nad tabulkou hráčů by jen odsouvalo čísla pod okraj. */}
@@ -253,12 +269,14 @@ export function SeasonTab({
       )}
 
       {isSearching && view === "entries" ? (
-        searchResults.length === 0 ? (
-          <p className="text-gray" style={{ fontSize: "0.85rem", padding: "16px" }}>
-            {t("archive.searchEmpty")}
-          </p>
-        ) : (
-          <>
+        <>
+          {viewSwitch}
+          {searchResults.length === 0 ? (
+            <p className="text-gray" style={{ fontSize: "0.85rem", padding: "16px" }}>
+              {t("archive.searchEmpty")}
+            </p>
+          ) : (
+            <>
             <div style={{ padding: "8px 16px 0" }}>
               <p className="text-bold" style={{ fontSize: "0.9rem" }}>
                 {tf("archive.h2hTitle", { count: String(headToHead.played), word: matchCountWord(headToHead.played) })}
@@ -279,8 +297,9 @@ export function SeasonTab({
                 ))}
               </div>
             ))}
-          </>
-        )
+            </>
+          )}
+        </>
       ) : (
         <>
           <div className="spacer-8" />
@@ -299,10 +318,7 @@ export function SeasonTab({
             extraLine={avgAttendance === null ? null : `${t("season.avgAttendance")} ${Math.round(avgAttendance * 100)} %`}
           />
 
-          <ChipRow>
-            <Chip selected={view === "players"} onClick={() => setView("players")} label={t("season.viewPlayers")} />
-            <Chip selected={view === "entries"} onClick={() => setView("entries")} label={t("season.viewEntries")} />
-          </ChipRow>
+          {viewSwitch}
 
           {isEmptyPeriod ? (
             <p className="text-gray" style={{ fontSize: "0.85rem", padding: 16, textAlign: "center" }}>

@@ -42,12 +42,17 @@ function relevantNames(players: Player[], archive: ArchivedLineup[], attendance:
   const ordered = [...players].sort((a, b) => positionSortOrder(a) - positionSortOrder(b)).map((p) => p.name);
   const seen = new Set(ordered);
   const extra: string[] = [];
+  function remember(name: string) {
+    if (seen.has(name)) return;
+    seen.add(name);
+    extra.push(name);
+  }
   for (const entry of archive) {
-    for (const name of participants(entry)) if (!seen.has(name)) (seen.add(name), extra.push(name));
-    for (const name of Object.keys(entry.playerStats)) if (!seen.has(name)) (seen.add(name), extra.push(name));
+    for (const name of participants(entry)) remember(name);
+    for (const name of Object.keys(entry.playerStats)) remember(name);
   }
   for (const record of attendance) {
-    for (const name of record.playerNames) if (!seen.has(name)) (seen.add(name), extra.push(name));
+    for (const name of record.playerNames) remember(name);
   }
   extra.sort((a, b) => a.localeCompare(b, "cs"));
   return [...ordered, ...extra];
