@@ -1,8 +1,43 @@
 // eslint-disable-next-line
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
 const geminiApiKey = defineSecret("GEMINI_API_KEY");
+
+initializeApp();
+const db = getFirestore();
+
+/**
+ * Vynucení App Checku (ověření, že volání přišlo z opravdové appky, ne ze skriptu). Zapíná se
+ * proměnnou prostředí při nasazení – `firebase deploy --only functions` s ENFORCE_APP_CHECK=true
+ * – až bude App Check zaregistrovaný v konzoli pro web (reCAPTCHA) i Android (Play Integrity).
+ * Dokud není, zůstává vypnuté, jinak by appka přestala fungovat všem.
+ */
+const ENFORCE_APP_CHECK = process.env.ENFORCE_APP_CHECK === "true";
+
+/** Společné nastavení obou funkcí – klíč ze Secret Manageru, CORS pro web, případně App Check. */
+const CALL_OPTIONS = { secrets: [geminiApiKey], cors: true, enforceAppCheck: ENFORCE_APP_CHECK };
+
+/**
+ * Kdo smí generovat: přihlášený uživatel appky (stačí anonymní přihlášení, to appka dělá sama
+ * při startu) a navíc musí poslat kód týmu, který opravdu existuje. Bez toho by stačilo znát
+ * URL funkce a kdokoli by mohl utrácet cizí kvótu Gemini.
+ */
+async function assertCallerAllowed(request) {
+  if (!request.auth) {
+    throw new HttpsError("unauthenticated", "Tahle funkce je jen pro přihlášené uživatele aplikace.");
+  }
+  const teamCode = String(request.data?.teamCode ?? "").trim().toUpperCase();
+  if (!/^[A-Z0-9]{4,10}$/.test(teamCode)) {
+    throw new HttpsError("permission-denied", "Chybí kód týmu.");
+  }
+  const team = await db.collection("teams").doc(teamCode).get();
+  if (!team.exists) {
+    throw new HttpsError("permission-denied", "Tým s tímhle kódem neexistuje.");
+  }
+}
 
 const RESPONSE_SCHEMA = {
   type: "OBJECT",
@@ -152,7 +187,8 @@ async function askGemini(body) {
  * serveru, appka (web i případně jiné klienty) ho nikdy nedostane do rukou. Vrací syrová
  * strukturovaná data (players/passSequence), vykreslení diagramu (kroužky/šipky) dělá klient.
  */
-exports.generateTrainingDrill = onCall({ secrets: [geminiApiKey], cors: true }, async (request) => {
+exports.generateTrainingDrill = onCall(CALL_OPTIONS, async (request) => {
+  await assertCallerAllowed(request);
   const promptText = String(request.data?.promptText ?? "").trim();
   // Jazyk posílá klient (podle nastavení zařízení); neznámá hodnota padá na češtinu.
   const lang = request.data?.lang === "en" ? "en" : "cs";
@@ -231,7 +267,8 @@ function buildPlanInstructions(promptText, lang, minutes) {
  * Callable Cloud Function – stejný proxy k Gemini, ale vrací rovnou CELÝ trénink (bloky
  * s minutami), ne jedno cvičení. Appka si bloky jen vloží do tréninku.
  */
-exports.generateTrainingPlan = onCall({ secrets: [geminiApiKey], cors: true }, async (request) => {
+exports.generateTrainingPlan = onCall(CALL_OPTIONS, async (request) => {
+  await assertCallerAllowed(request);
   const promptText = String(request.data?.promptText ?? "").trim();
   const lang = request.data?.lang === "en" ? "en" : "cs";
   // Délka tréninku z appky; mimo rozumný rozsah se srovná, ať model nedostane nesmysl.

@@ -2,6 +2,7 @@ import { httpsCallable } from "firebase/functions";
 import { functions } from "../firebase";
 import type { DiagramPoint, Drill, TrainingBlock } from "../types";
 import { currentLang, t, type Lang } from "./i18n";
+import { loadTeamCode } from "./localTeamCode";
 
 /** Malý kroužek (aproximovaný mnohoúhelníkem) – v diagramu značí pozici hráče. */
 function circleStroke(center: DiagramPoint, radius: number, segments = 16): DiagramPoint[] {
@@ -46,10 +47,10 @@ interface GeminiDrillResponse {
   passSequence: number[];
 }
 
-const generateTrainingDrillFn = httpsCallable<{ promptText: string; lang: Lang }, GeminiDrillResponse>(
-  functions,
-  "generateTrainingDrill"
-);
+const generateTrainingDrillFn = httpsCallable<
+  { promptText: string; lang: Lang; teamCode: string },
+  GeminiDrillResponse
+>(functions, "generateTrainingDrill");
 
 interface GeminiPlanResponse {
   name: string;
@@ -57,7 +58,7 @@ interface GeminiPlanResponse {
 }
 
 const generateTrainingPlanFn = httpsCallable<
-  { promptText: string; lang: Lang; minutes: number },
+  { promptText: string; lang: Lang; minutes: number; teamCode: string },
   GeminiPlanResponse
 >(functions, "generateTrainingPlan");
 
@@ -66,6 +67,7 @@ function describeAiError(e: unknown): Error {
   const code = (e as { code?: string }).code ?? "";
   // "resource-exhausted" = Gemini je přetížené (dočasné), "unavailable" = nedostupná síť.
   if (code.includes("resource-exhausted")) return new Error(t("ai.busy"));
+  if (code.includes("unauthenticated") || code.includes("permission-denied")) return new Error(t("ai.notAllowed"));
   return new Error(code.includes("unavailable") ? t("ai.network") : t("tr.aiFailed"));
 }
 
@@ -76,7 +78,13 @@ function describeAiError(e: unknown): Error {
 export async function generateTrainingPlanFromPrompt(promptText: string, minutes: number): Promise<TrainingBlock[]> {
   let result;
   try {
-    result = await generateTrainingPlanFn({ promptText, lang: currentLang(), minutes });
+    result = await generateTrainingPlanFn({
+      promptText,
+      lang: currentLang(),
+      minutes,
+      // Funkce si ověří, že kód patří existujícímu týmu – bez toho by ji mohl volat kdokoli.
+      teamCode: loadTeamCode() ?? "",
+    });
   } catch (e) {
     throw describeAiError(e);
   }
@@ -103,7 +111,7 @@ export async function generateDrillFromPrompt(promptText: string): Promise<Drill
   // podle kódu – "unavailable" je výpadek sítě/API, zbytek se neodliší.
   let result;
   try {
-    result = await generateTrainingDrillFn({ promptText, lang: currentLang() });
+    result = await generateTrainingDrillFn({ promptText, lang: currentLang(), teamCode: loadTeamCode() ?? "" });
   } catch (e) {
     throw describeAiError(e);
   }
