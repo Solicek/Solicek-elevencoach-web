@@ -453,6 +453,21 @@ export const STRINGS = {
   "tr.saveDiagram": { cs: "Uložit náčrtek", en: "Save the diagram" },
   "tr.aiTitle": { cs: "✨ AI asistent cvičení", en: "✨ AI drill assistant" },
   "tr.aiPlaceholder": { cs: "např. nácvik přihrávek pro 4 hráče", en: "e.g. passing practice for 4 players" },
+  "tr.aiModeDrill": { cs: "Jedno cvičení", en: "A single drill" },
+  "tr.aiModePlan": { cs: "Celý trénink", en: "A whole session" },
+  "tr.aiPlanMinutes": { cs: "Délka tréninku (minuty)", en: "Session length (minutes)" },
+  "tr.aiPlanHint": {
+    cs: "Popiš, jaký trénink chceš – asistent z toho poskládá bloky s minutami a vloží je do tréninku.",
+    en: "Describe the session you want – the assistant builds blocks with minutes and adds them to the training.",
+  },
+  "tr.aiPlanPlaceholder": {
+    cs: "např. kondiční trénink v zimě pro 12 dospělých, běhání a hry",
+    en: "e.g. winter conditioning for 12 adults, running and games",
+  },
+  "tr.aiPlanAdded": {
+    cs: "Přidáno bloků: {count} ({min} min)",
+    en: "Blocks added: {count} ({min} min)",
+  },
   "tr.aiFailed": {
     cs: "Nepodařilo se vygenerovat cvičení, zkus to prosím znovu.",
     en: "The drill could not be generated, please try again.",

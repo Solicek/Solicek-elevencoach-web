@@ -107,6 +107,41 @@ async function callGemini(model, body, key) {
 }
 
 /**
+ * Pošle požadavek Gemini a vrátí syrové tělo odpovědi. Projdou se modely a mezi pokusy se
+ * chvíli počká; jiná než „přetížená" chyba (špatný klíč, neplatný požadavek) se hlásí hned,
+ * opakovat ji nemá smysl.
+ */
+async function askGemini(body) {
+  const key = geminiApiKey.value();
+  let lastBusy = null;
+  const startedAt = Date.now();
+
+  for (let attempt = 0; attempt < RETRY_DELAYS_MS.length + 1; attempt++) {
+    if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
+    for (const model of MODELS) {
+      if (Date.now() - startedAt > RETRY_BUDGET_MS) break;
+      let result;
+      try {
+        result = await callGemini(model, body, key);
+      } catch (e) {
+        // Vypršelý limit nebo výpadek spojení – zkusí se další model, teprve když neprojde
+        // žádný, dostane trenér hlášku.
+        lastBusy = `${model}: ${e.name === "AbortError" ? "nestihl odpovědět" : String(e)}`;
+        continue;
+      }
+      if (result.ok) return result.text;
+      if (!BUSY_STATUSES.has(result.status)) {
+        throw new HttpsError("internal", `Gemini API vrátilo chybu ${result.status}: ${result.text.slice(0, 300)}`);
+      }
+      lastBusy = `${result.status}: ${result.text.slice(0, 200)}`;
+    }
+  }
+
+  console.warn("Gemini je přetížené, všechny pokusy selhaly –", lastBusy);
+  throw new HttpsError("resource-exhausted", "Gemini je zrovna přetížené. Zkus to prosím za chvíli znovu.");
+}
+
+/**
  * Callable Cloud Function – bezpečný proxy k Gemini API. Klíč žije jen v Secret Manageru na
  * serveru, appka (web i případně jiné klienty) ho nikdy nedostane do rukou. Vrací syrová
  * strukturovaná data (players/passSequence), vykreslení diagramu (kroužky/šipky) dělá klient.
@@ -127,45 +162,87 @@ exports.generateTrainingDrill = onCall({ secrets: [geminiApiKey], cors: true }, 
     },
   };
 
-  const key = geminiApiKey.value();
-  let text = null;
-  let lastBusy = null;
-
-  // Projdou se modely a mezi pokusy se chvíli počká. Jiná než „přetížená" chyba (špatný klíč,
-  // neplatný požadavek) se hlásí hned – opakovat ji nemá smysl.
-  const startedAt = Date.now();
-  outer: for (let attempt = 0; attempt < RETRY_DELAYS_MS.length + 1; attempt++) {
-    if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
-    for (const model of MODELS) {
-      if (Date.now() - startedAt > RETRY_BUDGET_MS) break outer;
-      let result;
-      try {
-        result = await callGemini(model, body, key);
-      } catch (e) {
-        // Vypršelý limit nebo výpadek spojení – zkusí se další model, teprve když neprojde
-        // žádný, dostane trenér hlášku.
-        lastBusy = `${model}: ${e.name === "AbortError" ? "nestihl odpovědět" : String(e)}`;
-        continue;
-      }
-      if (result.ok) {
-        text = result.text;
-        break outer;
-      }
-      if (!BUSY_STATUSES.has(result.status)) {
-        throw new HttpsError("internal", `Gemini API vrátilo chybu ${result.status}: ${result.text.slice(0, 300)}`);
-      }
-      lastBusy = `${result.status}: ${result.text.slice(0, 200)}`;
-    }
+  const text = await askGemini(body);
+  try {
+    const root = JSON.parse(text);
+    const generatedText = root.candidates[0].content.parts[0].text;
+    return JSON.parse(generatedText);
+  } catch (e) {
+    throw new HttpsError("internal", "Gemini vrátilo neočekávanou odpověď, zkus to prosím znovu.");
   }
+});
 
-  if (text === null) {
-    console.warn("Gemini je přetížené, všechny pokusy selhaly –", lastBusy);
-    throw new HttpsError(
-      "resource-exhausted",
-      "Gemini je zrovna přetížené. Zkus to prosím za chvíli znovu."
+/** Schéma pro celý trénink – bloky s minutami, přesně v tom tvaru, jak je appka ukládá. */
+const PLAN_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    name: { type: "STRING" },
+    blocks: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          title: { type: "STRING" },
+          description: { type: "STRING" },
+          minutes: { type: "INTEGER" },
+        },
+        required: ["title", "description", "minutes"],
+      },
+    },
+  },
+  required: ["name", "blocks"],
+};
+
+function buildPlanInstructions(promptText, lang, minutes) {
+  if (lang === "en") {
+    return (
+      "You are an assistant to a youth/amateur football coach. Plan a COMPLETE training session " +
+      'based on the coach\'s request: "' +
+      promptText +
+      '". The session should last about ' +
+      minutes +
+      " minutes in total. Split it into 4 to 7 blocks that follow each other in time: always start with a " +
+      "warm-up and finish with a cool-down. For each block give a short title, a practical description " +
+      "(1-3 sentences: what the players do, in what numbers, intensity, when to rotate) and the number of " +
+      "minutes. The minutes must add up to roughly the requested total. Write everything in English."
     );
   }
+  return (
+    "Jsi asistent fotbalového trenéra mládeže/amatérského týmu. Naplánuj CELÝ tréninkový " +
+    'blok podle požadavku trenéra: "' +
+    promptText +
+    '". Trénink má trvat celkem zhruba ' +
+    minutes +
+    " minut. Rozděl ho na 4 až 7 bloků, které jdou po sobě v čase: vždy začni rozcvičkou a skonči " +
+    "zklidněním a protažením. U každého bloku napiš krátký název, praktický popis (1-3 věty: co hráči " +
+    "dělají, v jakém počtu, jaká intenzita, kdy se střídá) a počet minut. Součet minut musí zhruba " +
+    "odpovídat zadané délce. NÁZEV i POPIS každého bloku napiš ČESKY (ne anglicky), názvy klidně " +
+    "stručné: Rozcvička, Intervalový běh, Hra na malém hřišti, Zklidnění a protažení."
+  );
+}
 
+/**
+ * Callable Cloud Function – stejný proxy k Gemini, ale vrací rovnou CELÝ trénink (bloky
+ * s minutami), ne jedno cvičení. Appka si bloky jen vloží do tréninku.
+ */
+exports.generateTrainingPlan = onCall({ secrets: [geminiApiKey], cors: true }, async (request) => {
+  const promptText = String(request.data?.promptText ?? "").trim();
+  const lang = request.data?.lang === "en" ? "en" : "cs";
+  // Délka tréninku z appky; mimo rozumný rozsah se srovná, ať model nedostane nesmysl.
+  const minutes = Math.min(180, Math.max(30, Number(request.data?.minutes) || 90));
+  if (!promptText) {
+    throw new HttpsError("invalid-argument", "Chybí popis tréninku.");
+  }
+
+  const body = {
+    contents: [{ parts: [{ text: buildPlanInstructions(promptText, lang, minutes) }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: PLAN_SCHEMA,
+    },
+  };
+
+  const text = await askGemini(body);
   try {
     const root = JSON.parse(text);
     const generatedText = root.candidates[0].content.parts[0].text;

@@ -419,6 +419,12 @@ export function TrainingDetailScreen({
             onAddCustomDrill(drill);
             setShowAiDrillDialog(false);
           }}
+          // Celý trénink se jen připíše za stávající bloky – nic se nepřepisuje, trenér si
+          // nechtěné bloky smaže křížkem.
+          onConfirmPlan={(blocks) => {
+            onUpdateSession({ ...session, blocks: [...session.blocks, ...blocks] });
+            setShowAiDrillDialog(false);
+          }}
         />
       )}
 

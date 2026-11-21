@@ -1,21 +1,29 @@
 import { useState } from "react";
 import { Dialog } from "../Shell/Dialog";
-import { generateDrillFromPrompt } from "../../lib/aiTrainingAssistant";
-import type { Drill } from "../../types";
+import { generateDrillFromPrompt, generateTrainingPlanFromPrompt } from "../../lib/aiTrainingAssistant";
+import type { Drill, TrainingBlock } from "../../types";
 import { t } from "../../lib/i18n";
 
 interface Props {
   onDismiss: () => void;
+  /** Jedno cvičení – uloží se do knihovny jako vlastní cvičení. */
   onConfirm: (drill: Drill) => void;
+  /** Celý trénink – bloky se připíšou k otevřenému tréninku. */
+  onConfirmPlan: (blocks: TrainingBlock[]) => void;
 }
 
+const DEFAULT_MINUTES = 90;
+
 /**
- * Dialog "AI asistenta" – trenér napíše volný popis požadovaného cvičení, Gemini (přes bezpečný
- * Cloud Function proxy) navrhne rozestavení hráčů a pořadí přihrávek, appka to vykreslí do
- * náčrtku a uloží jako vlastní cvičení (stejnou cestou jako ruční "+ Vlastní cvičení").
+ * Dialog "AI asistenta" – trenér napíše volný popis a Gemini (přes bezpečný Cloud Function
+ * proxy) buď navrhne JEDNO cvičení (rozestavení hráčů a pořadí přihrávek, appka to vykreslí
+ * do náčrtku a uloží jako vlastní cvičení), nebo poskládá CELÝ TRÉNINK jako bloky s minutami,
+ * které se rovnou připíšou k otevřenému tréninku.
  */
-export function AiDrillGeneratorDialog({ onDismiss, onConfirm }: Props) {
+export function AiDrillGeneratorDialog({ onDismiss, onConfirm, onConfirmPlan }: Props) {
   const [promptText, setPromptText] = useState("");
+  const [wholePlan, setWholePlan] = useState(false);
+  const [minutes, setMinutes] = useState(String(DEFAULT_MINUTES));
   const [isLoading, setIsLoading] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
 
@@ -23,9 +31,15 @@ export function AiDrillGeneratorDialog({ onDismiss, onConfirm }: Props) {
     setErrorText(null);
     setIsLoading(true);
     try {
-      const drill = await generateDrillFromPrompt(promptText.trim());
-      setIsLoading(false);
-      onConfirm(drill);
+      if (wholePlan) {
+        const blocks = await generateTrainingPlanFromPrompt(promptText.trim(), Number(minutes) || DEFAULT_MINUTES);
+        setIsLoading(false);
+        onConfirmPlan(blocks);
+      } else {
+        const drill = await generateDrillFromPrompt(promptText.trim());
+        setIsLoading(false);
+        onConfirm(drill);
+      }
     } catch (e) {
       setIsLoading(false);
       setErrorText(e instanceof Error ? e.message : t("tr.aiFailed"));
@@ -54,17 +68,50 @@ export function AiDrillGeneratorDialog({ onDismiss, onConfirm }: Props) {
         </>
       }
     >
+      <div style={{ display: "flex", gap: 8 }}>
+        <button
+          className={`chip ${wholePlan ? "" : "selected"}`}
+          disabled={isLoading}
+          onClick={() => setWholePlan(false)}
+        >
+          {t("tr.aiModeDrill")}
+        </button>
+        <button
+          className={`chip ${wholePlan ? "selected" : ""}`}
+          disabled={isLoading}
+          onClick={() => setWholePlan(true)}
+        >
+          {t("tr.aiModePlan")}
+        </button>
+      </div>
+      <div className="spacer-8" />
       <p className="text-gray" style={{ fontSize: "0.85rem" }}>
-        {t("tr.aiHint")}
+        {wholePlan ? t("tr.aiPlanHint") : t("tr.aiHint")}
       </p>
       <div className="spacer-8" />
       <input
         className="input"
-        placeholder={t("tr.aiPlaceholder")}
+        placeholder={wholePlan ? t("tr.aiPlanPlaceholder") : t("tr.aiPlaceholder")}
         value={promptText}
         onChange={(e) => setPromptText(e.target.value)}
         disabled={isLoading}
       />
+      {wholePlan && (
+        <>
+          <div className="spacer-8" />
+          <label className="field-label">{t("tr.aiPlanMinutes")}</label>
+          <input
+            className="input"
+            type="number"
+            inputMode="numeric"
+            min={30}
+            max={180}
+            value={minutes}
+            onChange={(e) => setMinutes(e.target.value)}
+            disabled={isLoading}
+          />
+        </>
+      )}
       {isLoading && (
         <>
           <div className="spacer-8" />

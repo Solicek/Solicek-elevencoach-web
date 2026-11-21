@@ -1,6 +1,6 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "../firebase";
-import type { DiagramPoint, Drill } from "../types";
+import type { DiagramPoint, Drill, TrainingBlock } from "../types";
 import { currentLang, t, type Lang } from "./i18n";
 
 /** Malý kroužek (aproximovaný mnohoúhelníkem) – v diagramu značí pozici hráče. */
@@ -51,6 +51,48 @@ const generateTrainingDrillFn = httpsCallable<{ promptText: string; lang: Lang }
   "generateTrainingDrill"
 );
 
+interface GeminiPlanResponse {
+  name: string;
+  blocks: { title: string; description: string; minutes: number }[];
+}
+
+const generateTrainingPlanFn = httpsCallable<
+  { promptText: string; lang: Lang; minutes: number },
+  GeminiPlanResponse
+>(functions, "generateTrainingPlan");
+
+/** Chyby z funkce chodí česky (jsou psané pro log), trenér vidí hlášku ve svém jazyce podle kódu. */
+function describeAiError(e: unknown): Error {
+  const code = (e as { code?: string }).code ?? "";
+  // "resource-exhausted" = Gemini je přetížené (dočasné), "unavailable" = nedostupná síť.
+  if (code.includes("resource-exhausted")) return new Error(t("ai.busy"));
+  return new Error(code.includes("unavailable") ? t("ai.network") : t("tr.aiFailed"));
+}
+
+/**
+ * Nechá Gemini poskládat CELÝ trénink – bloky s minutami, od rozcvičky po zklidnění. Vrací je
+ * rovnou jako TrainingBlock, takže se dají jen připsat k tréninku.
+ */
+export async function generateTrainingPlanFromPrompt(promptText: string, minutes: number): Promise<TrainingBlock[]> {
+  let result;
+  try {
+    result = await generateTrainingPlanFn({ promptText, lang: currentLang(), minutes });
+  } catch (e) {
+    throw describeAiError(e);
+  }
+  const blocks = (result.data.blocks ?? [])
+    .filter((b) => (b.title ?? "").trim() !== "")
+    .map((b) => ({
+      id: crypto.randomUUID(),
+      title: b.title.trim(),
+      description: (b.description ?? "").trim(),
+      // Minuty hlídáme i tady – model občas vrátí 0 nebo nesmyslně velké číslo.
+      minutes: Math.min(90, Math.max(1, Math.round(Number(b.minutes) || 10))),
+    }));
+  if (blocks.length === 0) throw new Error(t("tr.aiFailed"));
+  return blocks;
+}
+
 /**
  * Nechá Gemini (přes bezpečný Cloud Function proxy, klíč nikdy nedorazí do prohlížeče) navrhnout
  * cvičení podle volného popisu trenéra a převede odpověď na Drill s vykresleným náčrtkem
@@ -63,10 +105,7 @@ export async function generateDrillFromPrompt(promptText: string): Promise<Drill
   try {
     result = await generateTrainingDrillFn({ promptText, lang: currentLang() });
   } catch (e) {
-    const code = (e as { code?: string }).code ?? "";
-    // "resource-exhausted" = Gemini je přetížené (dočasné), "unavailable" = nedostupná síť.
-    if (code.includes("resource-exhausted")) throw new Error(t("ai.busy"));
-    throw new Error(code.includes("unavailable") ? t("ai.network") : t("tr.aiFailed"));
+    throw describeAiError(e);
   }
   const data = result.data;
 
