@@ -297,7 +297,12 @@ export const STRINGS = {
     cs: "Žebříček sezóny {season} (bez přátelských)",
     en: "Season rankings {season} (friendlies excluded)",
   },
-  "season.title": { cs: "Bilance sezóny (bez přátelských)", en: "Season record (friendlies excluded)" },
+  // Bez vybrané sezóny (volba "Vše") se sčítá napříč ročníky – nadpis to musí říct,
+  // jinak by tvrdil "Bilance sezóny" nad čísly za šest sezón.
+  "season.title": {
+    cs: "Bilance napříč sezónami (bez přátelských)",
+    en: "Record across all seasons (friendlies excluded)",
+  },
   "season.rankTitle": { cs: "Žebříček sezóny (bez přátelských)", en: "Season rankings (friendlies excluded)" },
   "season.win": { cs: "V", en: "W" },
   "season.draw": { cs: "R", en: "D" },
