@@ -3,7 +3,7 @@ import { getAuth, signInAnonymously, onAuthStateChanged, type User } from "fireb
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import { initializeAppCheck, ReCaptchaEnterpriseProvider, ReCaptchaV3Provider } from "firebase/app-check";
 
 // Stejný Firebase projekt jako Android appka (elevencoach-fc246) — sdílená data přes kód týmu.
 const firebaseConfig = {
@@ -25,14 +25,21 @@ export const functions = getFunctions(app);
 
 /**
  * App Check ověřuje, že volání přišlo z téhle appky, ne z cizího skriptu – chrání hlavně
- * placené Cloud Functions (AI asistent). Zapne se, jakmile je v .env klíč reCAPTCHA v3
- * (VITE_APPCHECK_SITE_KEY) vydaný pro tuhle doménu ve Firebase konzoli. Bez klíče se
- * přeskočí, aby appka fungovala i při lokálním vývoji.
+ * placené Cloud Functions (AI asistent). Zapne se, jakmile je v .env.local site key z
+ * Firebase konzole (VITE_APPCHECK_SITE_KEY). Bez klíče se přeskočí, aby appka fungovala
+ * i při vývoji.
+ *
+ * Konzole dnes vydává buď klasický reCAPTCHA v3 klíč, nebo klíč reCAPTCHA Enterprise –
+ * podle toho se přepíná VITE_APPCHECK_ENTERPRISE=true. Site key je veřejný (jde do
+ * prohlížeče), tajný je jen secret, který zůstává v konzoli.
  */
 const appCheckSiteKey = import.meta.env.VITE_APPCHECK_SITE_KEY;
 if (appCheckSiteKey) {
+  const useEnterprise = import.meta.env.VITE_APPCHECK_ENTERPRISE === "true";
   initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(appCheckSiteKey),
+    provider: useEnterprise
+      ? new ReCaptchaEnterpriseProvider(appCheckSiteKey)
+      : new ReCaptchaV3Provider(appCheckSiteKey),
     isTokenAutoRefreshEnabled: true,
   });
 }
