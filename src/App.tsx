@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ensureSignedIn } from "./firebase";
 import { clearTeamCode, loadReadOnly, loadTeamCode, saveTeamCode } from "./lib/localTeamCode";
+import { ensureMembership } from "./repository/teamRepository";
 import { TeamGateScreen } from "./components/TeamGate/TeamGateScreen";
 import { AppShell } from "./components/Shell/AppShell";
 import { PlayersTab } from "./components/Roster/PlayersTab";
@@ -43,6 +44,14 @@ function App() {
       .then(() => setAuthReady(true))
       .catch((err) => setAuthError(String(err)));
   }, []);
+
+  // Stávající uživatelé mají kód týmu uložený v prohlížeči, ale doklad o členství jim na
+  // serveru chybí – pravidla Firestore se na něj ptají. Doplní se tiše při startu, takže
+  // nikdo nemusí nic zadávat znovu.
+  useEffect(() => {
+    if (!authReady || !teamCode) return;
+    void ensureMembership(teamCode, isReadOnly ? "viewer" : "coach");
+  }, [authReady, teamCode, isReadOnly]);
 
   if (authError) {
     return (

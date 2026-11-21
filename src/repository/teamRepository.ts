@@ -83,6 +83,33 @@ function trainingDiagramsRef(teamCode: string) {
   return collection(teamDoc(teamCode), "trainingDiagrams");
 }
 
+/** Role v týmu. "viewer" = připojeno kapitánským kódem, tedy režim jen pro prohlížení. */
+export type TeamRole = "coach" | "viewer";
+
+function membersRef(teamCode: string) {
+  return collection(teamDoc(teamCode), "members");
+}
+
+/**
+ * Zapíše doklad o tom, že tenhle uživatel zná kód týmu (teams/{kód}/members/{uid}). Pravidla
+ * Firestore se na záznam ptají, než pustí k datům – znalost kódu se tím z appky přenese na
+ * server, takže se nikdo nedostane k týmu, jehož kód nezadal.
+ *
+ * Volá se při založení týmu, při připojení kódem a při startu appky (stávající uživatelé mají
+ * kód uložený v prohlížeči, ale záznam o členství jim ještě chybí).
+ *
+ * Chybu schválně jen zaloguje: dokud běží přechodné období, appka funguje i bez záznamu a
+ * nemá smysl kvůli tomu uživateli cokoli rozbíjet (typicky offline start).
+ */
+export async function ensureMembership(teamCode: string, role: TeamRole): Promise<void> {
+  try {
+    const user = await ensureSignedIn();
+    await setDoc(doc(membersRef(teamCode), user.uid), { role, joinedAt: serverTimestamp() }, { merge: true });
+  } catch (e) {
+    console.warn("Členství v týmu se nepodařilo zapsat:", e);
+  }
+}
+
 function randomTeamCode(): string {
   let code = "";
   for (let i = 0; i < 6; i++) code += TEAM_CODE_CHARS[Math.floor(Math.random() * TEAM_CODE_CHARS.length)];
@@ -100,6 +127,7 @@ export async function createTeam(teamName: string): Promise<string> {
     if (!snap.exists()) break;
   }
   await setDoc(teamDoc(code), { createdAt: serverTimestamp(), teamName });
+  await ensureMembership(code, "coach");
   return code;
 }
 
@@ -120,6 +148,7 @@ export async function resolveTeamAccess(rawCode: string): Promise<TeamAccess | n
 
   const teamSnap = await getDoc(teamDoc(code));
   if (teamSnap.exists()) {
+    await ensureMembership(code, "coach");
     return { teamCode: code, teamName: (teamSnap.data().teamName as string) ?? "", isReadOnly: false };
   }
 
@@ -128,6 +157,7 @@ export async function resolveTeamAccess(rawCode: string): Promise<TeamAccess | n
     const teamCode = viewerSnap.data().teamCode as string;
     const realTeamSnap = await getDoc(teamDoc(teamCode));
     if (!realTeamSnap.exists()) return null;
+    await ensureMembership(teamCode, "viewer");
     return { teamCode, teamName: (realTeamSnap.data().teamName as string) ?? "", isReadOnly: true };
   }
 

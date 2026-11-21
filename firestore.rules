@@ -1,11 +1,72 @@
 rules_version = '2';
+
+// Přístupová pravidla k datům týmů.
+//
+// Model: kód týmu je zároveň heslo. Kdo ho zná, smí s daty týmu pracovat – ale JEN se svým
+// týmem. Appka si při připojení kódem založí doklad o členství (teams/{kód}/members/{uid}) a
+// pravidla se na něj ptají, takže znalost kódu se z appky přenese na server.
+//
+// Druhá polovina ochrany je, že kolekci teams nejde vypsat. Bez toho by stačilo jedno
+// anonymní přihlášení a šlo by projít seznam všech týmů i s jejich soupiskami.
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /teams/{teamCode}/{document=**} {
-      allow read, write: if request.auth != null;
+
+    function signedIn() {
+      return request.auth != null;
     }
+
+    function memberDoc(teamCode) {
+      return /databases/$(database)/documents/teams/$(teamCode)/members/$(request.auth.uid);
+    }
+
+    /** Uživatel někdy zadal kód tohohle týmu a appka mu založila záznam o členství. */
+    function isMember(teamCode) {
+      return signedIn() && exists(memberDoc(teamCode));
+    }
+
+    /**
+     * PŘECHODNÉ OBDOBÍ. Starší verze appky o členství nevědí a záznam si nezaloží – kdyby
+     * pravidla hned vyžadovala členství, přestala by jim appka fungovat. Než se nové verze
+     * rozšíří, pouštíme je dál jako dřív.
+     *
+     * Až budou všichni přepnutí, stačí tady vrátit false: od té chvíle se každý dostane jen
+     * k týmu, jehož kód skutečně zadal. Víc se nikde měnit nemusí.
+     */
+    function legacyClient() {
+      return signedIn();
+    }
+
+    function mayUseTeam(teamCode) {
+      return isMember(teamCode) || legacyClient();
+    }
+
+    match /teams/{teamCode} {
+      // get = ověření kódu při připojování a čtení sestavy.
+      // list schválně CHYBÍ – bez něj nejde projít seznam týmů a vytěžit cizí data.
+      allow get: if signedIn();
+      allow create: if signedIn();
+      allow update, delete: if mayUseTeam(teamCode);
+
+      // Členství si zakládá každý sám pod svým uid. Důkazem, že kód zná, je samotná cesta
+      // dokumentu – kód týmu je v ní. Role se zapisuje pro informaci; o tom, kdo smí
+      // zapisovat, zatím nerozhoduje (kapitánský režim hlídá appka, viz poznámka níže).
+      match /members/{memberUid} {
+        allow read: if isMember(teamCode) || (signedIn() && memberUid == request.auth.uid);
+        allow write: if signedIn() && memberUid == request.auth.uid;
+      }
+
+      // Hráči, docházka, tréninky, archiv, nákresy, šablony, pokuty…
+      match /{sub}/{docId=**} {
+        allow read, write: if mayUseTeam(teamCode);
+      }
+    }
+
+    // Kapitánský kód -> kód týmu. Čte se při připojování, proto get pro přihlášené;
+    // list opět chybí, aby nešlo kódy vytěžit hromadně.
     match /viewerCodes/{code} {
-      allow read, write: if request.auth != null;
+      allow get: if signedIn();
+      allow create, update: if signedIn() && mayUseTeam(request.resource.data.teamCode);
+      allow delete: if false;
     }
   }
 }

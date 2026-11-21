@@ -1,8 +1,18 @@
 rules_version = '2';
+
+// Fotky k archivovaným sestavám. Stejný model jako u Firestore: přístup má ten, kdo zná kód
+// týmu – doloženo záznamem o členství v teams/{kód}/members/{uid}.
 service firebase.storage {
   match /b/{bucket}/o {
     match /teams/{teamCode}/{allPaths=**} {
-      allow read, write: if request.auth != null;
+
+      // Shodná úvaha jako ve firestore.rules: starší verze appky členství nezakládají.
+      // Až se nové verze rozšíří, smaž v obou souborech větev s legacyClient().
+      allow read, write: if request.auth != null
+        && (
+          firestore.exists(/databases/(default)/documents/teams/$(teamCode)/members/$(request.auth.uid))
+          || request.auth != null
+        );
     }
   }
 }
