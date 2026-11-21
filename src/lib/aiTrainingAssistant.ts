@@ -64,13 +64,19 @@ export async function generateDrillFromPrompt(promptText: string): Promise<Drill
     result = await generateTrainingDrillFn({ promptText, lang: currentLang() });
   } catch (e) {
     const code = (e as { code?: string }).code ?? "";
+    // "resource-exhausted" = Gemini je přetížené (dočasné), "unavailable" = nedostupná síť.
+    if (code.includes("resource-exhausted")) throw new Error(t("ai.busy"));
     throw new Error(code.includes("unavailable") ? t("ai.network") : t("tr.aiFailed"));
   }
   const data = result.data;
 
-  const corners = (data.players ?? []).map((p) => ({
-    x: Math.min(0.95, Math.max(0.05, p.x)),
-    y: Math.min(0.95, Math.max(0.05, p.y)),
+  // Model občas vrátí souřadnice v procentech (0–100) místo podílu plochy (0–1). Bez
+  // přepočtu by se po oříznutí všichni hráči slili do rohu, takže se to pozná a podělí.
+  const raw = data.players ?? [];
+  const looksLikePercent = raw.some((p) => Math.abs(p.x) > 1.5 || Math.abs(p.y) > 1.5);
+  const corners = raw.map((p) => ({
+    x: Math.min(0.95, Math.max(0.05, looksLikePercent ? p.x / 100 : p.x)),
+    y: Math.min(0.95, Math.max(0.05, looksLikePercent ? p.y / 100 : p.y)),
   }));
 
   const diagram: DiagramPoint[][] = [];

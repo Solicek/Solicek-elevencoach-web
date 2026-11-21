@@ -68,6 +68,45 @@ function buildInstructions(promptText, lang) {
 }
 
 /**
+ * Gemini občas vrátí 503 „model je přetížený" (nebo 429/500) – není to chyba nákresu ani
+ * klíče, jen dočasná špička. Zkusí se proto znovu, chvíli počkat a nakonec sáhnout po
+ * odlehčeném modelu, ať trenér nemusí klikat podruhé.
+ */
+// Pořadí modelů: první se zkouší nejlepší dostupný flash, lite je rychlá záloha. Alias
+// "gemini-flash-latest" tu schválně není – v listopadu 2026 na požadavky vůbec neodpovídal
+// (spojení viselo až do timeoutu), takže by jen spolykal čas.
+const MODELS = ["gemini-3.6-flash", "gemini-flash-lite-latest"];
+/** Kolik času dostane jedno volání modelu, než se přejde na další – visící model nesmí zdržet. */
+const SINGLE_CALL_TIMEOUT_MS = 15000;
+const RETRY_DELAYS_MS = [800, 2000, 4000];
+const BUSY_STATUSES = new Set([429, 500, 502, 503, 504]);
+/**
+ * Dokdy se smí zkoušet. Volající (appka) čeká na odpověď jen omezenou dobu a funkce sama má
+ * strop 60 s – radši tedy vrátit srozumitelnou hlášku, než nechat spojení spadnout na timeout.
+ */
+const RETRY_BUDGET_MS = 35000;
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Jedno zavolání Gemini s vlastním limitem. Vrací stav a tělo, výjimku hází jen při chybě sítě. */
+async function callGemini(model, body, key) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), SINGLE_CALL_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    return { status: response.status, ok: response.ok, text: await response.text() };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Callable Cloud Function – bezpečný proxy k Gemini API. Klíč žije jen v Secret Manageru na
  * serveru, appka (web i případně jiné klienty) ho nikdy nedostane do rukou. Vrací syrová
  * strukturovaná data (players/passSequence), vykreslení diagramu (kroužky/šipky) dělá klient.
@@ -88,22 +127,43 @@ exports.generateTrainingDrill = onCall({ secrets: [geminiApiKey], cors: true }, 
     },
   };
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${geminiApiKey.value()}`;
+  const key = geminiApiKey.value();
+  let text = null;
+  let lastBusy = null;
 
-  let response;
-  try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    throw new HttpsError("unavailable", "Nepodařilo se spojit s Gemini API – zkontroluj připojení k internetu.");
+  // Projdou se modely a mezi pokusy se chvíli počká. Jiná než „přetížená" chyba (špatný klíč,
+  // neplatný požadavek) se hlásí hned – opakovat ji nemá smysl.
+  const startedAt = Date.now();
+  outer: for (let attempt = 0; attempt < RETRY_DELAYS_MS.length + 1; attempt++) {
+    if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
+    for (const model of MODELS) {
+      if (Date.now() - startedAt > RETRY_BUDGET_MS) break outer;
+      let result;
+      try {
+        result = await callGemini(model, body, key);
+      } catch (e) {
+        // Vypršelý limit nebo výpadek spojení – zkusí se další model, teprve když neprojde
+        // žádný, dostane trenér hlášku.
+        lastBusy = `${model}: ${e.name === "AbortError" ? "nestihl odpovědět" : String(e)}`;
+        continue;
+      }
+      if (result.ok) {
+        text = result.text;
+        break outer;
+      }
+      if (!BUSY_STATUSES.has(result.status)) {
+        throw new HttpsError("internal", `Gemini API vrátilo chybu ${result.status}: ${result.text.slice(0, 300)}`);
+      }
+      lastBusy = `${result.status}: ${result.text.slice(0, 200)}`;
+    }
   }
 
-  const text = await response.text();
-  if (!response.ok) {
-    throw new HttpsError("internal", `Gemini API vrátilo chybu ${response.status}: ${text.slice(0, 300)}`);
+  if (text === null) {
+    console.warn("Gemini je přetížené, všechny pokusy selhaly –", lastBusy);
+    throw new HttpsError(
+      "resource-exhausted",
+      "Gemini je zrovna přetížené. Zkus to prosím za chvíli znovu."
+    );
   }
 
   try {

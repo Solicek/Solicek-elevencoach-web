@@ -474,6 +474,10 @@ export const STRINGS = {
     cs: "Nepodařilo se spojit s Gemini API – zkontroluj připojení k internetu.",
     en: "Could not reach the Gemini API – check your internet connection.",
   },
+  "ai.busy": {
+    cs: "Gemini je zrovna přetížené. Zkus to prosím za chvíli znovu.",
+    en: "Gemini is busy right now. Please try again in a moment.",
+  },
   "ai.badResponse": {
     cs: "Gemini vrátilo neočekávanou odpověď, zkus to prosím znovu.",
     en: "Gemini returned an unexpected response, please try again.",
