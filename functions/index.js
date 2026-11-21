@@ -115,10 +115,15 @@ async function askGemini(body) {
   const key = geminiApiKey.value();
   let lastBusy = null;
   const startedAt = Date.now();
+  // Model, kterému došla denní kvóta (429), nemá smysl v témže požadavku zkoušet znovu –
+  // odloží se stranou a jede se rovnou na další.
+  const exhausted = new Set();
 
   for (let attempt = 0; attempt < RETRY_DELAYS_MS.length + 1; attempt++) {
     if (attempt > 0) await sleep(RETRY_DELAYS_MS[attempt - 1]);
+    if (MODELS.every((m) => exhausted.has(m))) break;
     for (const model of MODELS) {
+      if (exhausted.has(model)) continue;
       if (Date.now() - startedAt > RETRY_BUDGET_MS) break;
       let result;
       try {
@@ -133,7 +138,8 @@ async function askGemini(body) {
       if (!BUSY_STATUSES.has(result.status)) {
         throw new HttpsError("internal", `Gemini API vrátilo chybu ${result.status}: ${result.text.slice(0, 300)}`);
       }
-      lastBusy = `${result.status}: ${result.text.slice(0, 200)}`;
+      if (result.status === 429) exhausted.add(model);
+      lastBusy = `${model} ${result.status}: ${result.text.slice(0, 200)}`;
     }
   }
 
