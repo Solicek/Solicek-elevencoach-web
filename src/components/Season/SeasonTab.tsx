@@ -109,8 +109,8 @@ export function SeasonTab({
   const activeSeason = selectedSeason === undefined ? defaultSeasonStartYear(seasons) : selectedSeason;
 
   const [selectedPart, setSelectedPart] = useState<SeasonPart | undefined>(undefined);
-  // Nad volbou "Vše" (napříč sezónami) nedávají poloviny smysl a přepínač se skrývá. Musí se
-  // pak i přestat filtrovat – jinak by schovaný "podzim" dál tiše ořezával data.
+  // Když se sezóna nedá určit (data bez platného data), nedávají poloviny smysl a přepínač se
+  // skryje. Musí se pak i přestat filtrovat – jinak by schovaný "podzim" dál tiše ořezával data.
   const partsVisible = seasonPartsAvailable() && activeSeason !== null;
 
   /**

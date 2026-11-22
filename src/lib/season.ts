@@ -39,10 +39,7 @@ export function currentSeasonStartYear(): number {
   return month >= SEASON_START_MONTH ? now.getFullYear() : now.getFullYear() - 1;
 }
 
-/**
- * Sezóny, ve kterých tým něco odehrál, od nejnovější. Záznamy bez platného data se vynechají –
- * ty jsou vidět jen ve volbě "Vše", aby se nikde neztratily.
- */
+/** Sezóny, ve kterých tým něco odehrál, od nejnovější. Záznamy bez platného data se vynechají. */
 export function listSeasonStartYears(dateStrings: string[]): number[] {
   const years = new Set<number>();
   for (const dateString of dateStrings) {
@@ -62,7 +59,13 @@ export function defaultSeasonStartYear(available: number[]): number | null {
   return available.includes(current) ? current : available[0];
 }
 
-/** Filtr položek s datem na jednu sezónu; `null` = bez filtru ("Vše"). */
+/**
+ * Filtr položek s datem na jednu sezónu.
+ *
+ * `null` = bez filtru. Není to volba pro trenéra (statistika je vždy za jednu sezónu), ale
+ * záchranná brzda pro případ, že se sezóna nedá určit ani u jednoho záznamu – pak je lepší
+ * ukázat všechno než prázdnou obrazovku.
+ */
 export function inSeason<T extends { date: string }>(items: T[], startYear: number | null): T[] {
   if (startYear === null) return items;
   return items.filter((item) => seasonStartYear(item.date) === startYear);

@@ -288,7 +288,6 @@ export const STRINGS = {
   "stats.rating": { cs: "Hodnocení", en: "Rating" },
 
   // Bilance a žebříček sezóny
-  "season.all": { cs: "Vše", en: "All" },
   "season.titleNamed": {
     cs: "Bilance sezóny {season} (bez přátelských)",
     en: "Season record {season} (friendlies excluded)",
@@ -297,11 +296,11 @@ export const STRINGS = {
     cs: "Žebříček sezóny {season} (bez přátelských)",
     en: "Season rankings {season} (friendlies excluded)",
   },
-  // Bez vybrané sezóny (volba "Vše") se sčítá napříč ročníky – nadpis to musí říct,
-  // jinak by tvrdil "Bilance sezóny" nad čísly za šest sezón.
+  // Nadpis bez názvu sezóny – použije se jen tam, kde se sezóna nedá určit (data bez platného
+  // data). Běžně se ukazuje season.titleNamed s konkrétním ročníkem.
   "season.title": {
-    cs: "Bilance napříč sezónami (bez přátelských)",
-    en: "Record across all seasons (friendlies excluded)",
+    cs: "Bilance zápasů (bez přátelských)",
+    en: "Match record (friendlies excluded)",
   },
   "season.rankTitle": { cs: "Žebříček sezóny (bez přátelských)", en: "Season rankings (friendlies excluded)" },
   "season.win": { cs: "V", en: "W" },
