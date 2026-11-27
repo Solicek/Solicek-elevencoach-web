@@ -18,6 +18,7 @@ import type {
   ArchivedLineup,
   AttendanceRecord,
   Drill,
+  FineItem,
   FinePayment,
   FineRates,
   Player,
@@ -30,11 +31,13 @@ import {
   archivedLineupToMap,
   attendanceRecordToMap,
   drillToMap,
+  fineItemToMap,
   finePaymentToMap,
   fineRatesToMap,
   mapToArchivedLineup,
   mapToAttendanceRecord,
   mapToDrill,
+  mapToFineItem,
   mapToFinePayment,
   mapToFineRates,
   mapToPlayer,
@@ -78,6 +81,10 @@ function trainingTemplatesRef(teamCode: string) {
 }
 function finePaymentsRef(teamCode: string) {
   return collection(teamDoc(teamCode), "finePayments");
+}
+
+function fineItemsRef(teamCode: string) {
+  return collection(teamDoc(teamCode), "fineItems");
 }
 function trainingDiagramsRef(teamCode: string) {
   return collection(teamDoc(teamCode), "trainingDiagrams");
@@ -371,6 +378,27 @@ export function listenFinePayments(teamCode: string, onChange: (payments: FinePa
   return onSnapshot(finePaymentsRef(teamCode), (snap) => {
     onChange(snap.docs.map((d) => mapToFinePayment(d.id, d.data())));
   });
+}
+
+/** Ruční položky pokut (příspěvky, pozdní příchody) – karty se sem nepočítají, ty vznikají ze zápasů. */
+export function listenFineItems(teamCode: string, onChange: (items: FineItem[]) => void): Unsubscribe {
+  return onSnapshot(fineItemsRef(teamCode), (snap) => {
+    onChange(snap.docs.map((d) => mapToFineItem(d.id, d.data())));
+  });
+}
+
+/** Zápis i úprava (např. odškrtnutí zaplaceno) – jde o stejný dokument podle id. */
+export async function saveFineItem(teamCode: string, item: FineItem): Promise<void> {
+  await setDoc(doc(fineItemsRef(teamCode), item.id), fineItemToMap(item));
+}
+
+/** Předepíše stejnou položku všem hráčům najednou – měsíční příspěvky. */
+export async function saveFineItems(teamCode: string, items: FineItem[]): Promise<void> {
+  await Promise.all(items.map((item) => saveFineItem(teamCode, item)));
+}
+
+export async function deleteFineItem(teamCode: string, item: FineItem): Promise<void> {
+  await deleteDoc(doc(fineItemsRef(teamCode), item.id));
 }
 
 export async function setFinePaymentStatus(teamCode: string, id: string, matchId: string, playerName: string, paid: boolean): Promise<void> {

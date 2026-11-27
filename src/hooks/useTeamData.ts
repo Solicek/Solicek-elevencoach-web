@@ -5,6 +5,7 @@ import type {
   ArchivedLineup,
   AttendanceRecord,
   Drill,
+  FineItem,
   FinePayment,
   FineRates,
   Player,
@@ -28,6 +29,7 @@ export interface TeamData {
   trainingTemplates: TrainingTemplate[];
   fineRates: FineRates;
   finePayments: FinePayment[];
+  fineItems: FineItem[];
   trainingDiagrams: TrainingDiagram[];
   lineupLoaded: boolean;
   setFormationName: (name: string) => void;
@@ -59,6 +61,7 @@ export function useTeamData(teamCode: string, onTeamMissing?: () => void): TeamD
   const [trainingTemplates, setTrainingTemplates] = useState<TrainingTemplate[]>([]);
   const [fineRates, setFineRates] = useState<FineRates>(defaultFineRates);
   const [finePayments, setFinePayments] = useState<FinePayment[]>([]);
+  const [fineItems, setFineItems] = useState<FineItem[]>([]);
   const [trainingDiagrams, setTrainingDiagrams] = useState<TrainingDiagram[]>([]);
   const [lineupLoaded, setLineupLoaded] = useState(false);
 
@@ -117,6 +120,7 @@ export function useTeamData(teamCode: string, onTeamMissing?: () => void): TeamD
     const unsubCustomDrills = repo.listenCustomDrills(teamCode, setCustomDrills);
     const unsubTemplates = repo.listenTrainingTemplates(teamCode, setTrainingTemplates);
     const unsubFinePayments = repo.listenFinePayments(teamCode, setFinePayments);
+    const unsubFineItems = repo.listenFineItems(teamCode, setFineItems);
     const unsubTrainingDiagrams = repo.listenTrainingDiagrams(teamCode, setTrainingDiagrams);
 
     return () => {
@@ -128,6 +132,7 @@ export function useTeamData(teamCode: string, onTeamMissing?: () => void): TeamD
       unsubCustomDrills();
       unsubTemplates();
       unsubFinePayments();
+      unsubFineItems();
       unsubTrainingDiagrams();
     };
   }, [teamCode]);
@@ -153,6 +158,7 @@ export function useTeamData(teamCode: string, onTeamMissing?: () => void): TeamD
     trainingTemplates,
     fineRates,
     finePayments,
+    fineItems,
     trainingDiagrams,
     lineupLoaded,
     setFormationName,

@@ -3,6 +3,7 @@ import type {
   AttendanceRecord,
   DiagramPoint,
   Drill,
+  FineItem,
   FinePayment,
   FineRates,
   Player,
@@ -105,6 +106,21 @@ export function mapToFinePayment(id: string, data: Doc): FinePayment {
     id,
     matchId: (data.matchId as string) ?? "",
     playerName: (data.playerName as string) ?? "",
+    paid: Boolean(data.paid),
+  };
+}
+
+export function fineItemToMap(i: FineItem): Doc {
+  return { playerName: i.playerName, label: i.label, amount: i.amount, date: i.date, paid: i.paid };
+}
+
+export function mapToFineItem(id: string, data: Doc): FineItem {
+  return {
+    id,
+    playerName: (data.playerName as string) ?? "",
+    label: (data.label as string) ?? "",
+    amount: Number(data.amount) || 0,
+    date: (data.date as string) ?? "",
     paid: Boolean(data.paid),
   };
 }

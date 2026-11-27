@@ -311,13 +311,17 @@ function MainApp({ teamCode, isReadOnly, onLeaveTeam }: { teamCode: string; isRe
           content: (
             <FinesTab
               archive={data.archive}
+              players={data.players}
               fineRates={data.fineRates}
               finePayments={data.finePayments}
+              fineItems={data.fineItems}
               readOnly={isReadOnly}
               onSaveFineRates={(rates) => repo.saveFineRates(teamCode, rates)}
               onSetPaid={(matchId, playerName, paid) =>
                 repo.setFinePaymentStatus(teamCode, finePaymentId(matchId, playerName), matchId, playerName, paid)
               }
+              onSaveFineItems={(items) => repo.saveFineItems(teamCode, items)}
+              onDeleteFineItem={(item) => repo.deleteFineItem(teamCode, item)}
             />
           ),
         },

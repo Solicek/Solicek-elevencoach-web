@@ -68,6 +68,22 @@ export const defaultFineRates: FineRates = {
   straightRed: 200,
 };
 
+/**
+ * Ruční položka v pokutách – všechno, co nevzniklo z karty: pozdní příchod, měsíční
+ * příspěvek, startovné za hráče. Karty se dopočítávají ze zápasů (lib/fines.ts), tohle
+ * si trenér zadává sám, takže si položka nese vlastní datum i příznak zaplacení.
+ */
+export interface FineItem {
+  id: string;
+  playerName: string;
+  /** Za co to je – "Pozdní příchod", "Příspěvek říjen". */
+  label: string;
+  amount: number;
+  /** DD-MM-RRRR, kvůli filtru na sezónu stejně jako u zápasů. */
+  date: string;
+  paid: boolean;
+}
+
 export interface FinePayment {
   id: string;
   matchId: string;
